@@ -53,7 +53,7 @@ using System.Text;
 
 namespace CsNetCDF
 {
-    public static class NetCDF
+    public static partial class NetCDF
     {
         #region C# Friendly methods
         //
@@ -206,6 +206,11 @@ namespace CsNetCDF
         //
         // Friendly methods for writing attributes
         //
+        public static int nc_put_att_text(int ncid, int varid, string name, string value)
+        {
+            return nc_put_att_text(ncid, varid, name, value.Length, value);
+        }
+
         public static int nc_put_att_double(int ncid, int varid, string name, double[] value)
         {
             return nc_put_att_double(ncid, varid, name, nc_type.NC_DOUBLE, value.Length, value);
@@ -294,19 +299,6 @@ namespace CsNetCDF
             short[] v = new short[1];
             v[0] = value;
             return nc_put_att_short(ncid, varid, name, v);
-        }
-
-        public static int nc_put_att_text(int ncid, int varid, string name, byte[] value)
-        {
-            return nc_put_att_text(ncid, varid, name, value.Length, value);
-        }
-
-        /// <summary>Write a single attribute value</summary>
-        public static int nc_put_att_text(int ncid, int varid, string name, byte value)
-        {
-            byte[] v = new byte[1];
-            v[0] = value;
-            return nc_put_att_text(ncid, varid, name, v);
         }
 
         public static int nc_put_att_ubyte(int ncid, int varid, string name, byte[] value)
@@ -616,6 +608,8 @@ namespace CsNetCDF
             NC_NOWRITE = 0x0000,
             /// <summary>Set read-write access for nc_open()</summary>
             NC_WRITE = 0x0001,
+            /// <summary>Use diskless file. Mode flag for nc_open() or nc_create()</summary>
+            NC_DISKLESS = 0x0008,
             /// <summary>Share updates, limit caching. Use this in mode flags for both nc_create() and nc_open()</summary>
             NC_SHARE = 0x0800,
             /// <summary>Read from memory. Mode flag for nc_open() or nc_create()</summary>
@@ -1543,7 +1537,7 @@ namespace CsNetCDF
 
         #region Writing Attributes
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_text(int ncid, int varid, string name, int len, byte[] value);
+        public static extern int nc_put_att_text(int ncid, int varid, string name, int len, string value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_att_schar(int ncid, int varid, string name, nc_type type, int len, sbyte[] value);
@@ -1696,16 +1690,6 @@ namespace CsNetCDF
         /// <summary>Get the cache size, nelems, and preemption policy.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_chunk_cache(out int sizep, out int nelemsp, out float preemptionp);
-
-        #endregion
-
-        #region Multi-dimensional array support examples
-        // Multi dimensional array support
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var_float(int ncid, int varid, float[,] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var_float(int ncid, int varid, float[,] ip);
         #endregion
     }
 }

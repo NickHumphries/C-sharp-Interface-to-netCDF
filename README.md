@@ -21,6 +21,8 @@ Any of the functions can be copied and modified to provide direct access to mult
  
           to nc_put_var_float(int ncid, int varid, float[,] op);
           or nc_put_var_float(int ncid, int varid, float[,,] op);
+        
+I suggest putting these modified methods into the CSnetCDFExtensions.cs file, to keep the principal interface more closely focussed on the netCDF C interface API.
                 
 Data types
 Some of the data types supported by the netCDF dll do not map exactly to C# data types

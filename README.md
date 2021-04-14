@@ -1,9 +1,6 @@
 # C-sharp-Interface-to-netCDF
 A C# safe, managed interface to the netCDF DLL
 
-# C-sharp-Interface-to-netCDF
-A C# safe, managed interface to the netCDF DLL
-
 netCDF: doi:10.5065/D6H70CW6 https://doi.org/10.5065/D6H70CW6
      
      

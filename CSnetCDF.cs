@@ -1,11 +1,438 @@
+/*
+ * netCDF: doi:10.5065/D6H70CW6 https://doi.org/10.5065/D6H70CW6
+ *     
+ *     
+ * This C# interface supports the functions provided by the Unidata netcdf.dll (https://www.unidata.ucar.edu/software/netcdf/) 
+ * currently up to 4.7.4, although not all functions are supported (e.g. I have omitted the deprecated *varm* functions)
+ * 
+ * This file supports both x86 and x64 versions of the dlls, the principal difference being that the index[] start[] and count[] 
+ * arrays for functions such as get_var1 or get_vara are passed as int[] for x86 and long[] for x64.
+ * 
+ * A collection of C# friendly methods have been provided to simplify calls to functions returning string variables and also for 
+ * getting and putting attributes. Thanks to https://stackoverflow.com/questions/6300093/why-cant-i-return-a-char-string-from-c-to-c-sharp-in-a-release-build 
+ * (https://stackoverflow.com/users/1164966/benoit-blanchon) for the custom marshaller.
+ *
+ * Also, I have provided a couple of examples of how to get or put multidimensional arrays without reformatting. 
+ * Any of the functions can be copied and modified to provide direct access to multidimensional arrays simply by changing the method from: 
+ * 
+ *          nc_put_var_float(int ncid, int varid, float[] op);
+ * 
+ *          to nc_put_var_float(int ncid, int varid, float[,] op);
+ *          or nc_put_var_float(int ncid, int varid, float[,,] op);
+ *                
+ * Data types
+ * Some of the data types supported by the netCDF dll do not map exactly to C# data types
+ * The following netCDF data types are defined:
+ *             
+ *      NC_BYTE     C# sbyte
+ *      NC_CHAR     C# byte
+ *      NC_SHORT    C# short
+ *      NC_INT      C# int
+ *      NC_FLOAT    C# float
+ *      NC_DOUBLE   C# double
+ *      NC_UBYTE    C# byte
+ *      NC_USHORT   C# ushort
+ *      NC_UINT     C# uint
+ *      NC_INT64    C# long
+ *      NC_UINT64   C# ulong
+ *      NC_STRING   C# string
+ * 
+ * Additionally, the following *_var* functions do not have an exact netCDF data type
+ * 
+ *      text
+ *      schar   
+ *      uchar
+ *      
+ *  and NC_CHAR and NC_BYTE do not have an exact set of *_var* functions
+ *  
+ */
+
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace CsNetCDF
 {
-    public static class netCDF
+    public static class NetCDF
     {
+        #region C# Friendly methods
+        //
+        // C# Friendly methods for returning strings
+        //  These methods return the status as a parameter
+        //
+        /// <summary>Friendly method for nc_inq_path</summary>
+        public static string nc_inq_path(int ncid, out int status)
+        {
+            status = nc_inq_path(ncid, out int len, null);
+            if (status != 0) return string.Empty;
+            StringBuilder sb = new StringBuilder(len);
+            status = nc_inq_path(ncid, out len, sb);
+            if (status != 0) return string.Empty;
+            return sb.ToString();
+        }
+
+        /// <summary>Friendly method for nc_inq_grpname_full</summary>
+        public static string nc_inq_grpname_full(int ncid, out int status)
+        {
+            status = nc_inq_grpname_full(ncid, out int len, null);
+            if (status != 0) return string.Empty;
+            StringBuilder sb = new StringBuilder(len);
+            status = nc_inq_grpname_full(ncid, out len, sb);
+            if (status != 0) return string.Empty;
+            return sb.ToString();
+        }
+
+        //
+        // Friendly methods for reading attributes
+        //
+        public static string nc_get_att_text(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return string.Empty;
+            StringBuilder sb = new StringBuilder(lenp);
+            status = nc_get_att_text(ncid, varid, name, sb);
+            if (status != 0) return string.Empty;
+            return sb.ToString();
+        }
+        public static sbyte[] nc_get_att_schar(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            sbyte[] value = new sbyte[lenp];
+            status = nc_get_att_schar(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static byte[] nc_get_att_uchar(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            byte[] value = new byte[lenp];
+            status = nc_get_att_uchar(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static short[] nc_get_att_short(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            short[] value = new short[lenp];
+            status = nc_get_att_short(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static int[] nc_get_att_int(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            int[] value = new int[lenp];
+            status = nc_get_att_int(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static long[] nc_get_att_long(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            long[] value = new long[lenp];
+            status = nc_get_att_long(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static float[] nc_get_att_float(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            float[] value = new float[lenp];
+            status = nc_get_att_float(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static double[] nc_get_att_double(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            double[] value = new double[lenp];
+            status = nc_get_att_double(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static byte[] nc_get_att_ubyte(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_att(ncid, varid, name, out nc_type nctype, out int lenp);
+            if (status != 0) return null;
+            byte[] value = new byte[lenp];
+            status = nc_get_att_ubyte(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static ushort[] nc_get_att_ushort(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            ushort[] value = new ushort[lenp];
+            status = nc_get_att_ushort(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static uint[] nc_get_att_uint(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            uint[] value = new uint[lenp];
+            status = nc_get_att_uint(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static long[] nc_get_att_longlong(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            long[] value = new long[lenp];
+            status = nc_get_att_longlong(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+        public static ulong[] nc_get_att_ulonglong(int ncid, int varid, string name, out int status)
+        {
+            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            if (status != 0) return null;
+            ulong[] value = new ulong[lenp];
+            status = nc_get_att_ulonglong(ncid, varid, name, value);
+            if (status != 0) return null;
+            return value;
+        }
+
+        //
+        // Friendly methods for writing attributes
+        //
+        public static int nc_put_att_double(int ncid, int varid, string name, double[] value)
+        {
+            return nc_put_att_double(ncid, varid, name, nc_type.NC_DOUBLE, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_double(int ncid, int varid, string name, double value)
+        {
+            double[] v = new double[1];
+            v[0] = value;
+            return nc_put_att_double(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_float(int ncid, int varid, string name, float[] value)
+        {
+            return nc_put_att_float(ncid, varid, name, nc_type.NC_FLOAT, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_float(int ncid, int varid, string name, float value)
+        {
+            float[] v = new float[1];
+            v[0] = value;
+            return nc_put_att_float(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_int(int ncid, int varid, string name, int[] value)
+        {
+            return nc_put_att_int(ncid, varid, name, nc_type.NC_INT, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_int(int ncid, int varid, string name, int value)
+        {
+            int[] v = new int[1];
+            v[0] = value;
+            return nc_put_att_int(ncid, varid, name, v);
+        }
+        public static int nc_put_att_long(int ncid, int varid, string name, long[] value)
+        {
+            return nc_put_att_long(ncid, varid, name, nc_type.NC_INT64, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_long(int ncid, int varid, string name, long value)
+        {
+            long[] v = new long[1];
+            v[0] = value;
+            return nc_put_att_long(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_longlong(int ncid, int varid, string name, long[] value)
+        {
+            return nc_put_att_longlong(ncid, varid, name, nc_type.NC_INT64, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_longlong(int ncid, int varid, string name, long value)
+        {
+            long[] v = new long[1];
+            v[0] = value;
+            return nc_put_att_long(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_schar(int ncid, int varid, string name, sbyte[] value)
+        {
+            return nc_put_att_schar(ncid, varid, name, nc_type.NC_BYTE, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_schar(int ncid, int varid, string name, sbyte value)
+        {
+            sbyte[] v = new sbyte[1];
+            v[0] = value;
+            return nc_put_att_schar(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_short(int ncid, int varid, string name, short[] value)
+        {
+            return nc_put_att_short(ncid, varid, name, nc_type.NC_SHORT, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_short(int ncid, int varid, string name, short value)
+        {
+            short[] v = new short[1];
+            v[0] = value;
+            return nc_put_att_short(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_text(int ncid, int varid, string name, byte[] value)
+        {
+            return nc_put_att_text(ncid, varid, name, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_text(int ncid, int varid, string name, byte value)
+        {
+            byte[] v = new byte[1];
+            v[0] = value;
+            return nc_put_att_text(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_ubyte(int ncid, int varid, string name, byte[] value)
+        {
+            return nc_put_att_ubyte(ncid, varid, name, nc_type.NC_UBYTE, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_ubyte(int ncid, int varid, string name, byte value)
+        {
+            byte[] v = new byte[1];
+            v[0] = value;
+            return nc_put_att_ubyte(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_uchar(int ncid, int varid, string name, byte[] value)
+        {
+            return nc_put_att_uchar(ncid, varid, name, nc_type.NC_CHAR, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_uchar(int ncid, int varid, string name, byte value)
+        {
+            byte[] v = new byte[1];
+            v[0] = value;
+            return nc_put_att_uchar(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_uint(int ncid, int varid, string name, uint[] value)
+        {
+            return nc_put_att_uint(ncid, varid, name, nc_type.NC_UINT, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_uint(int ncid, int varid, string name, uint value)
+        {
+            uint[] v = new uint[1];
+            v[0] = value;
+            return nc_put_att_uint(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_ulonglong(int ncid, int varid, string name, ulong[] value)
+        {
+            return nc_put_att_ulonglong(ncid, varid, name, nc_type.NC_UINT64, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_ulonglong(int ncid, int varid, string name, ulong value)
+        {
+            ulong[] v = new ulong[1];
+            v[0] = value;
+            return nc_put_att_ulonglong(ncid, varid, name, v);
+        }
+
+        public static int nc_put_att_ushort(int ncid, int varid, string name, ushort[] value)
+        {
+            return nc_put_att_ushort(ncid, varid, name, nc_type.NC_USHORT, value.Length, value);
+        }
+
+        /// <summary>Write a single attribute value</summary>
+        public static int nc_put_att_ushort(int ncid, int varid, string name, ushort value)
+        {
+            ushort[] v = new ushort[1];
+            v[0] = value;
+            return nc_put_att_ushort(ncid, varid, name, v);
+        }
+
+        //
+        //  Friendly methods for dealing with strings and other awkward data types
+        //
+        // Methods for strings
+        public static string[] nc_get_var_string(int ncid, int varid, out int status)
+        {
+            int[] dim = new int[1];
+            status = nc_inq_vardimid(ncid, varid, dim);
+            if (status != 0) return null;
+            status = nc_inq_dimlen(ncid, dim[0], out int length);
+            if (status != 0) return null;
+            IntPtr[] ptrs = new IntPtr[length];
+            status = nc_get_var_string(ncid, varid, ptrs);
+            if (status != 0) return null;
+            string[] s = new string[ptrs.Length];
+            for (int i = 0; i < ptrs.Length; i++) s[i] = Marshal.PtrToStringAnsi(ptrs[i]);
+            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
+            return s;
+        }
+
+        public static string nc_get_var1_string(int ncid, int varid, int[] index, out int status)
+        {
+            IntPtr[] ptrs = new IntPtr[1];
+            status = nc_get_var1_string(ncid, varid, index, ptrs);
+            if (status != 0) return null;
+            string s;
+            s = Marshal.PtrToStringAnsi(ptrs[0]);
+            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
+            return s;
+        }
+
+        public static string[] nc_get_vara_string(int ncid, int varid, int[] start, int[] count, out int status)
+        {
+            int len = 0;
+            for (int i = 0; i < count.Length; i++) len += count[i];
+            IntPtr[] ptrs = new IntPtr[len];
+            status = nc_get_vara_string(ncid, varid, start, count, ptrs);
+            if (status != 0) return null;
+            string[] s = new string[len];
+            for (int i = 0; i < ptrs.Length; i++) s[i] = Marshal.PtrToStringAnsi(ptrs[i]);
+            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
+            return s;
+        }
+
+        public static string[] nc_get_vars_string(int ncid, int varid, int[] start, int[] count, int[] stride, out int status)
+        {
+            int len = 0;
+            for (int i = 0; i < count.Length; i++) len += count[i] / stride[i];
+            IntPtr[] ptrs = new IntPtr[len];
+            status = nc_get_vars_string(ncid, varid, start, count, stride, ptrs);
+            if (status != 0) return null;
+            string[] s = new string[len];
+            for (int i = 0; i < ptrs.Length; i++) s[i] = Marshal.PtrToStringAnsi(ptrs[i]);
+            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
+            return s;
+        }
+
+        #endregion
+
         #region Constants
         /// <summary>'size' argument to ncdimdef for an unlimited dimension</summary>
         public const int NC_UNLIMITED = 0;
@@ -156,7 +583,7 @@ namespace CsNetCDF
            * NC_NETCDF4 (create netCDF-4/HDF5 file), 
            * NC_CLASSIC_MODEL (enforce netCDF classic mode on netCDF-4/HDF5 files), 
            * NC_DISKLESS (store data in memory), and NC_PERSIST (force the NC_DISKLESS data from memory to a file), 
-           * NC_MMAP (use MMAP for NC_DISKLESS instead of NC_INMEMORY – deprecated). 
+           * NC_MMAP (use MMAP for NC_DISKLESS instead of NC_INMEMORY â€“ deprecated). 
            */
         public enum CreateMode : int
         {
@@ -193,24 +620,10 @@ namespace CsNetCDF
             NC_SHARE = 0x0800,
             /// <summary>Read from memory. Mode flag for nc_open() or nc_create()</summary>
             NC_INMEMORY = 0x8000
-        }  
-        #endregion
-
-        #region CustomMarshaller
-        // From https://stackoverflow.com/questions/6300093/why-cant-i-return-a-char-string-from-c-to-c-sharp-in-a-release-build
-        class ConstCharPtrMarshaler : ICustomMarshaler
-        {
-            public object MarshalNativeToManaged(IntPtr pNativeData) => Marshal.PtrToStringAnsi(pNativeData);
-            public IntPtr MarshalManagedToNative(object ManagedObj) => IntPtr.Zero;
-            public void CleanUpNativeData(IntPtr pNativeData) {}
-            public void CleanUpManagedData(object ManagedObj) {}
-            public int GetNativeDataSize() => IntPtr.Size;
-            static readonly ConstCharPtrMarshaler instance = new ConstCharPtrMarshaler();
-            public static ICustomMarshaler GetInstance(string cookie) => instance;
         }
         #endregion
 
-        #region Methods
+        #region Methods returning const char * that require the custom Marshaller
         //
         // Methods returning const char * require the custom Marshaller
         //
@@ -224,181 +637,39 @@ namespace CsNetCDF
         [return: MarshalAs(UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(ConstCharPtrMarshaler))]
         public static extern string nc_strerror(int ncerr);
 
-        #region C# Friendly methods
-        //
-        // C# Friendly methods for returning strings
-        //
-        /// <summary>Friendly method for nc_inq_path</summary>
-        public static string nc_inq_path(int ncid)
+        #region CustomMarshaller
+        // From https://stackoverflow.com/questions/6300093/why-cant-i-return-a-char-string-from-c-to-c-sharp-in-a-release-build
+        class ConstCharPtrMarshaler : ICustomMarshaler
         {
-            nc_inq_path(ncid, out int len, null);
-            StringBuilder sb = new StringBuilder(len);
-            nc_inq_path(ncid, out len, sb);
-            return sb.ToString();
+            public object MarshalNativeToManaged(IntPtr pNativeData) => Marshal.PtrToStringAnsi(pNativeData);
+            public IntPtr MarshalManagedToNative(object ManagedObj) => IntPtr.Zero;
+            public void CleanUpNativeData(IntPtr pNativeData) { }
+            public void CleanUpManagedData(object ManagedObj) { }
+            public int GetNativeDataSize() => IntPtr.Size;
+            static readonly ConstCharPtrMarshaler instance = new ConstCharPtrMarshaler();
+            public static ICustomMarshaler GetInstance(string cookie) => instance;
         }
-
-        /// <summary>Friendly method for nc_inq_grpname_full</summary>
-        public static string nc_inq_grpname_full(int ncid)
-        {
-            nc_inq_grpname_full(ncid, out int len,null);
-            StringBuilder sb = new StringBuilder(len);
-            nc_inq_grpname_full(ncid, out len, sb);
-            return sb.ToString();
-        }
-
-        //
-        // Friendly methods for reading attributes
-        //
-        public static string nc_get_att_text(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            StringBuilder sb = new StringBuilder(length);
-            nc_get_att_text(ncid, varid, name, sb);
-            return sb.ToString();
-        }
-        public static sbyte[] nc_get_att_schar(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            sbyte[] value = new sbyte[length];
-            nc_get_att_schar(ncid, varid, name, value);
-            return value;
-        }
-        public static byte[] nc_get_att_uchar(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            byte[] value = new byte[length];
-            nc_get_att_uchar(ncid, varid, name, value);
-            return value;
-        }
-        public static short[] nc_get_att_short(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            short[] value = new short[length];
-            nc_get_att_short(ncid, varid, name, value);
-            return value;
-        }
-        public static int[] nc_get_att_int(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            int[] value = new int[length];
-            nc_get_att_int(ncid, varid, name, value);
-            return value;
-        }
-        public static long[] nc_get_att_long(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            long[] value = new long[length];
-            nc_get_att_long(ncid, varid, name, value);
-            return value;
-        }
-        public static float[] nc_get_att_float(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            float[] value = new float[length];
-            nc_get_att_float(ncid, varid, name, value);
-            return value;
-        }
-        public static double[] nc_get_att_double(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            double[] value = new double[length];
-            nc_get_att_double(ncid, varid, name, value);
-            return value;
-        }
-        public static byte[] nc_get_att_ubyte(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            byte[] value = new byte[length];
-            nc_get_att_ubyte(ncid, varid, name, value);
-            return value;
-        }
-        public static ushort[] nc_get_att_ushort(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            ushort[] value = new ushort[length];
-            nc_get_att_ushort(ncid, varid, name, value);
-            return value;
-        }
-        public static uint[] nc_get_att_uint(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            uint[] value = new uint[length];
-            nc_get_att_uint(ncid, varid, name, value);
-            return value;
-        }
-        public static long[] nc_get_att_longlong(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            long[] value = new long[length];
-            nc_get_att_longlong(ncid, varid, name, value);
-            return value;
-        }
-        public static ulong[] nc_get_att_ulonglong(int ncid, int varid, string name)
-        {
-            nc_inq_att(ncid, varid, name, out nc_type nctype, out int length);
-            ulong[] value = new ulong[length];
-            nc_get_att_ulonglong(ncid, varid, name, value);
-            return value;
-        }
-
-        //
-        //  Friendly methods for dealing with strings and other awkward data types
-        //
-        // Methods for strings
-        public static string[] nc_get_var_string(int ncid, int varid)
-        {
-            int[] dim = new int[1];
-            int status = nc_inq_vardimid(ncid, varid, dim);
-            status = nc_inq_dimlen(ncid, dim[0], out int length);
-            IntPtr[] ptrs = new IntPtr[length];
-            status = nc_get_var_string(ncid, varid, ptrs);
-            string[] s = new string[ptrs.Length];
-            for (int i = 0; i < ptrs.Length; i++) s[i] = Marshal.PtrToStringAnsi(ptrs[i]);
-            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
-            return s;
-        }
-
-        public static string nc_get_var1_string(int ncid, int varid, int[] index)
-        {
-            IntPtr[] ptrs = new IntPtr[1];
-            int status = nc_get_var1_string(ncid, varid, index, ptrs);
-            string s;
-            s = Marshal.PtrToStringAnsi(ptrs[0]);
-            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
-            return s;
-        }
-
-        public static string[] nc_get_vara_string(int ncid, int varid, int[] start, int[] count)
-        {
-            int len = 0;
-            for (int i = 0; i < count.Length; i++) len += count[i];
-            IntPtr[] ptrs = new IntPtr[len];
-            int status = nc_get_vara_string(ncid, varid, start, count, ptrs);
-            string[] s = new string[len];
-            for (int i = 0; i < ptrs.Length; i++) s[i] = Marshal.PtrToStringAnsi(ptrs[i]);
-            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
-            return s;
-        }
-
-        public static string[] nc_get_vars_string(int ncid, int varid, int[] start, int[] count, int[] stride)
-        {
-            int len = 0;
-            for (int i = 0; i < count.Length; i++) len += count[i]/stride[i];
-            IntPtr[] ptrs = new IntPtr[len];
-            int status = nc_get_vars_string(ncid, varid, start, count, stride, ptrs);
-            string[] s = new string[len];
-            for (int i = 0; i < ptrs.Length; i++) s[i] = Marshal.PtrToStringAnsi(ptrs[i]);
-            status = nc_free_string((IntPtr)ptrs.Length, ptrs);
-            return s;
-        }
-
+        #endregion
         #endregion
 
-        #region IO methods
+        #region File and Data IO
         //
-        // IO
+        //  Some funtions are omitted here:
+        //  nc_close_memio
+        //  nc_create_par
+        //  nc_create_par_fortran
+        //  nc_def_user_format
+        //  nc_int_user_format
+        //  nc_open_mem
+        //  nc_open_memio
+        //  nc_open_par
+        //  nc_open_par_fortran
+        //  nc_var_par_access
         //
-        /// <summary>Close an open netCDF dataset</summary>
+        /// <summary>Provided fpr completeness - No longer necessary for user to invoke manually.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_abort(int ncid);
+
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_close(int ncid);
 
@@ -430,6 +701,9 @@ namespace CsNetCDF
         /// Use nc_inq_path(ncid) instead, otherwise a correctly sized StringBuilder is required</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_path(int ncid, out int pathlen, StringBuilder path);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_type(int ncid, out nc_type type, StringBuilder name, out int size);
 
         /// <summary>Open an existing netCDF file.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -480,16 +754,62 @@ namespace CsNetCDF
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_unlimdim(int ncid, out int unlimdimid);
 
+        /// <summary>Find the ID of the unlimited dimension.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_unlimdims(int ncid, int[] nunlimdimsp, int[] unlimdimidsp);
+
         /// <summary>Rename a dimension.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_rename_dim(int ncid, int dimid, string name);
+        public static extern int nc_rename_dim(int ncid, int dimid, string name, out int status);
         #endregion
 
-        #region Variables - Defining and learning
+        #region Defining Variables
         //
         // Defining Variables
         // Learning about Variables
         //
+        /// <summary>Define a variable</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var(int ncid, string name, nc_type xtype, int ndims, int[] dimids, out int varidp);
+
+        /// <summary>Define fill value behavior for a variable. This must be done after nc_def_var</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var_fill(int ncid, int varid, int no_fill, int fill_value);
+
+        /// <summary>Set compression settings for a variable. Lower is faster, higher is better.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var_deflate(int ncid, int varid, int shuffle, int deflate, int deflate_level);
+
+        /// <summary>Set fletcher32 checksum for a var. This must be done after nc_def_var</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var_fletcher32(int ncid, int varid, int fletcher32);
+
+        /// <summary>Define chunking for a variable. This must be done after nc_def_var</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var_chunking(int ncid, int varid, int storage, out int chunksizesp);
+
+        /// <summary>Define endianness of a variable.
+        /// NC_ENDIAN_NATIVE to select the native endianness of the platform (the default), NC_ENDIAN_LITTLE to use little-endian, NC_ENDIAN_BIG to use big-endian
+        /// </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var_endian(int ncid, int varid, int endian);
+
+        /// <summary>Define a filter for a variable</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_var_filter(int ncid, int varid, uint id, int nparams, out uint parms);
+
+        /// <summary>Set szip compression settings on a variable.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_set_var_szip(int ncid, int varid, int options_maskp, int pixels_per_blockp);
+
+        /// <summary>Rename a variable.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_rename_var(int ncid, int varid, string name);
+
+        /// <summary>Use this function to free resources associated with NC_STRING data.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_free_string(IntPtr len, IntPtr[] data);
+
         /// <summary>Set the per-variable cache size, nelems, and preemption policy. </summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_set_var_chunk_cache(int ncid, int varid, int size, int nelems, float preemption);
@@ -497,180 +817,17 @@ namespace CsNetCDF
         /// <summary>Get the per-variable cache size, nelems, and preemption policy.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var_chunk_cache(int ncid, int varid, out int sizep, out int nelemsp, out float preemptionp);
-
-        /// <summary>Define a variable</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var(int ncid, string name, nc_type xtype, int ndims, int[] dimids, out int varidp);
-
-        /// <summary>Set compression settings for a variable. Lower is faster, higher is better.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var_deflate(int ncid, int varid, int shuffle, int deflate, int deflate_level);
-
-        /// <summary>Find out compression settings of a var.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_deflate(int ncid, int varid, out int shufflep, out int deflatep, out int deflate_levelp);
-
-        /// <summary>Find out szip settings of a var.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_szip(int ncid, int varid, out int options_maskp, out int pixels_per_blockp);
-
-        /// <summary>Set fletcher32 checksum for a var. This must be done after nc_def_var</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var_fletcher32(int ncid, int varid, int fletcher32);
-
-        /// <summary>Inquire about fletcher32 checksum for a var.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_fletcher32(int ncid, int varid, out int fletcher32p);
-
-        /// <summary>Define chunking for a variable. This must be done after nc_def_var</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var_chunking(int ncid, int varid, int storage, out int chunksizesp);
-
-        /// <summary>Inq chunking stuff for a var.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_chunking(int ncid, int varid, out int storagep, out int chunksizesp);
-
-        /// <summary>Define fill value behavior for a variable. This must be done after nc_def_var</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var_fill(int ncid, int varid, int no_fill, int fill_value);
-
-        /// <summary>Inq fill value setting for a var.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_fill(int ncid, int varid, out int no_fill, out int fill_valuep);
-
-        /// <summary>Define the endianness of a variable.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var_endian(int ncid, int varid, int endian);
-
-        /// <summary>Learn about the endianness of a variable.</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_endian(int ncid, int varid, out int endianp);
-
-        /// <summary>Define a filter for a variable</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_var_filter(int ncid, int varid, uint id, int nparams, out uint parms);
-
-        /// <summary>Learn about the filter on a variable</summary>
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var_filter(int ncid, int varid, out uint idp, out int nparams, out uint parms);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_var(int ncid, int varid, string name, out nc_type type, out int ndims, int[] dimids, out int natts);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_varids(int ncid, out int nvars, int[] varids);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_vartype(int ncid, int varid, out nc_type xtypep);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_varnatts(int ncid, int varid, out int nattsp);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_varid(int ncid, string name, out int varidp);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_nvars(int ncid, out int nvars);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_varname(int ncid, int varid, StringBuilder name);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_varndims(int ncid, int varid, out int ndims);
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_vardimid(int ncid, int varid, int[] dimids);
-
         #endregion
 
-        #region Attributes
-        //
-        //  Attributes
-        //      
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_natts(int ncid, out int ngatts);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_attname(int ncid, int varid, int attnum, StringBuilder name);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_att(int ncid, int varid, string name, out nc_type type, out int length);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_text(int ncid, int varid, string name, StringBuilder value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_schar(int ncid, int varid, string name, sbyte[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_uchar(int ncid, int varid, string name, byte[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_short(int ncid, int varid, string name, short[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_int(int ncid, int varid, string name, int[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_long(int ncid, int varid, string name, long[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_float(int ncid, int varid, string name, float[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_double(int ncid, int varid, string name, double[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_ubyte(int ncid, int varid, string name, byte[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_ushort(int ncid, int varid, string name, ushort[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_uint(int ncid, int varid, string name, uint[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_longlong(int ncid, int varid, string name, long[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_att_ulonglong(int ncid, int varid, string name, ulong[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_text(int ncid, int varid, string name, int len, string value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_schar(int ncid, int varid, string name, nc_type type, int len, sbyte[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_uchar(int ncid, int varid, string name, nc_type type, int len, byte[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_short(int ncid, int varid, string name, nc_type type, int len, short[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_int(int ncid, int varid, string name, nc_type type, int len, int[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_long(int ncid, int varid, string name, nc_type type, int len, long[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_float(int ncid, int varid, string name, nc_type type, int len, float[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_double(int ncid, int varid, string name, nc_type type, int len, double[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_ubyte(int ncid, int varid, string name, nc_type type, int len, byte[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_ushort(int ncid, int varid, string name, nc_type type, int len, ushort[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_uint(int ncid, int varid, string name, nc_type type, int len, uint[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_longlong(int ncid, int varid, string name, nc_type type, int len, long[] value);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_ulonglong(int ncid, int varid, string name, nc_type type, int len, ulong[] value);
-        #endregion
-
-        #region Variables - Reading
+        #region Reading Data from Variables (x86 and x64 versions)
+        #region nc_get_var*
         //
         // Reading values from variables
+        //  Note that the generic functions have been omitted:
+        //  nc_get_var
+        //  nc_get_vara
+        //  nc_get_vars
+        //  and all deprecated nc_get_varm funcrions
         //
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var_text(int ncid, int varid, byte[] ip);
@@ -700,10 +857,9 @@ namespace CsNetCDF
         public static extern int nc_get_var_ulonglong(int ncid, int varid, ulong[] ip);
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var_string(int ncid, int varid, IntPtr[] ip);
+        #endregion
 
-        //
-        // x86 versions of get_var1
-        //
+        #region x86 versions of get_var1
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var1_text(int ncid, int varid, int[] index, out byte ip);
 
@@ -745,10 +901,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var1_string(int ncid, int varid, int[] index, IntPtr[] ip);
+        #endregion
 
-        //
-        // x64 versions of get_var1
-        //
+        #region x64 versions of get_var1
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var1_text(int ncid, int varid, long[] index, out byte ip);
 
@@ -790,10 +945,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var1_string(int ncid, int varid, long[] index, out StringBuilder ip);
+        #endregion
 
-        //
-        // x86 versions of get_vara
-        //
+        #region x86 versions of get_vara
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vara_text(int ncid, int varid, int[] start, int[] count, byte[] ip);
 
@@ -835,10 +989,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vara_string(int ncid, int varid, int[] start, int[] count, IntPtr[] ip);
+        #endregion
 
-        //
-        // x64 versions of get_vara
-        //
+        #region x64 versions of get_vara
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vara_text(int ncid, int varid, long[] start, long[] count, byte[] ip);
 
@@ -882,173 +1035,145 @@ namespace CsNetCDF
         public static extern int nc_get_vara_string(int ncid, int varid, long[] start, long[] count, string[] ip);
         #endregion
 
-        #region Variables - writing
-        //
-        // x86 versions of get_vars/put_vars
-        //
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_text(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op);
-
+        #region x86 versions of get_vars
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_text(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uchar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_uchar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_schar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, sbyte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_schar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, sbyte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_short(int ncid, int varid, int[] startp, int[] countp, int[] stridep, short[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_short(int ncid, int varid, int[] startp, int[] countp, int[] stridep, short[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_int(int ncid, int varid, int[] startp, int[] countp, int[] stridep, int[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_int(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out int[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_long(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_long(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out long[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_float(int ncid, int varid, int[] startp, int[] countp, int[] stridep, float[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_float(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out float[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_double(int ncid, int varid, int[] startp, int[] countp, int[] stridep, double[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_double(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out double[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ushort(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ushort[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_ushort(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out ushort[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uint(int ncid, int varid, int[] startp, int[] countp, int[] stridep, uint[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_uint(int ncid, int varid, int[] startp, int[] countp, int[] stridep, uint[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_longlong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_longlong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ulonglong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ulong[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_ulonglong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ulong[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_string(int ncid, int varid, int[] startp, int[] countp, int[] stridep, string op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_string(int ncid, int varid, int[] startp, int[] countp, int[] stridep, IntPtr[] ip);
         #endregion
 
-        //
-        // x64 versions of get_vars/put_vars
-        //
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_text(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] op);
-
+        #region x64 versions of get_vars
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_text(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uchar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_uchar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_schar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, sbyte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_schar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, sbyte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_short(int ncid, int varid, long[] startp, long[] countp, long[] stridep, short[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_short(int ncid, int varid, long[] startp, long[] countp, long[] stridep, short[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_int(int ncid, int varid, long[] startp, long[] countp, long[] stridep, int[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_int(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out int[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_long(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_long(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out long[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_float(int ncid, int varid, long[] startp, long[] countp, long[] stridep, float[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_float(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out float[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_double(int ncid, int varid, long[] startp, long[] countp, long[] stridep, double[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_double(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out double[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ushort(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ushort[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_ushort(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out ushort[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uint(int ncid, int varid, long[] startp, long[] countp, long[] stridep, uint[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_uint(int ncid, int varid, long[] startp, long[] countp, long[] stridep, uint[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_longlong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_longlong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ulonglong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ulong[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_vars_ulonglong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ulong[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_string(int ncid, int varid, long[] startp, long[] countp, long[] stridep, string op);
+        public static extern int nc_get_vars_string(int ncid, int varid, long[] startp, long[] countp, long[] stridep, string[] ip);
+        #endregion
+        #endregion
+
+        #region Learning about Variables
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_varid(int ncid, string name, out int varidp);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_string(int ncid, int varid, long[] startp, long[] countp, long[] stridep, string[] ip);
+        public static extern int nc_inq_var(int ncid, int varid, string name, out nc_type type, out int ndims, int[] dimids, out int natts);
 
-        //
-        // Write variables
-        //
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_varname(int ncid, int varid, StringBuilder name);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_vartype(int ncid, int varid, out nc_type xtypep);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_varndims(int ncid, int varid, out int ndims);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_vardimid(int ncid, int varid, int[] dimids);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_varnatts(int ncid, int varid, out int nattsp);
+
+        /// <summary>Find out compression settings of a var.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_deflate(int ncid, int varid, out int shufflep, out int deflatep, out int deflate_levelp);
+        
+        /// <summary>Inquire about fletcher32 checksum for a var.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_fletcher32(int ncid, int varid, out int fletcher32p);
+
+        /// <summary>Inq chunking stuff for a var.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_chunking(int ncid, int varid, out int storagep, out int chunksizesp);
+
+        /// <summary>Inq fill value setting for a var.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_fill(int ncid, int varid, out int no_fill, out int fill_valuep);
+
+        /// <summary>Learn about the endianness of a variable.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_endian(int ncid, int varid, out int endianp);
+
+        /// <summary>Find out szip settings of a var.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_szip(int ncid, int varid, out int options_maskp, out int pixels_per_blockp);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_nvars(int ncid, out int nvars);
+
+        /// <summary>Learn about the filter on a variable</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_var_filter(int ncid, int varid, out uint idp, out int nparams, out uint parms);
+        #endregion
+
+        #region Writing variables (x86 and x64 versions)
+        #region nc_put_var
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var_text(int ncid, int varid, byte[] op);
 
@@ -1090,10 +1215,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var_string(int ncid, int varid, string[] op);
+        #endregion
 
-        //
-        // x86 versions of put_var1
-        //
+        #region x86 versions of put_var1
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var1_text(int ncid, int varid, int[] index, byte op);
 
@@ -1135,10 +1259,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var1_string(int ncid, int varid, int[] index, string op);
+        #endregion
 
-        //
-        // x64 versions
-        //
+        #region x64 versions or put var1
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var1_text(int ncid, int varid, long[] index, byte op);
 
@@ -1180,11 +1303,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var1_string(int ncid, int varid, long[] index, string op);
+        #endregion
 
-
-        //
-        // x86 versions of put_vara
-        //
+        #region x86 versions of put_vara
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_vara_text(int ncid, int varid, int[] start, int[] count, byte[] op);
 
@@ -1226,10 +1347,9 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_vara_string(int ncid, int varid, int[] start, int[] count, string[] op);
+        #endregion
 
-        //
-        // x64 versions of put_vara
-        //
+        #region x64 versions of put_vara
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_vara_text(int ncid, int varid, long[] start, long[] count, byte[] op);
 
@@ -1271,18 +1391,229 @@ namespace CsNetCDF
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_vara_string(int ncid, int varid, long[] start, long[] count, string[] op);
+        #endregion
 
-
-        //
-        // Group methods
-        //
-        /// <summary>Given an ncid and group name (NULL gets root group), return locid. </summary>
+        #region x86 versions of put_vars
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_ncid(int ncid, string name, out int grp_ncid);
+        public static extern int nc_put_vars_text(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op);
 
-        /// <summary>Given a location id, return the number of groups it contains, and an array of their locids.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_grps(int ncid, out int numgrps, out int ncids);
+        public static extern int nc_put_vars_uchar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_schar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, sbyte[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_short(int ncid, int varid, int[] startp, int[] countp, int[] stridep, short[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_int(int ncid, int varid, int[] startp, int[] countp, int[] stridep, int[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_long(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_float(int ncid, int varid, int[] startp, int[] countp, int[] stridep, float[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_double(int ncid, int varid, int[] startp, int[] countp, int[] stridep, double[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_ushort(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ushort[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_uint(int ncid, int varid, int[] startp, int[] countp, int[] stridep, uint[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_longlong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_ulonglong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ulong[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_string(int ncid, int varid, int[] startp, int[] countp, int[] stridep, string op);
+        #endregion
+
+        #region x64 versions of put_vars
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_text(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_uchar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_schar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, sbyte[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_short(int ncid, int varid, long[] startp, long[] countp, long[] stridep, short[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_int(int ncid, int varid, long[] startp, long[] countp, long[] stridep, int[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_long(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_float(int ncid, int varid, long[] startp, long[] countp, long[] stridep, float[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_double(int ncid, int varid, long[] startp, long[] countp, long[] stridep, double[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_ushort(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ushort[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_uint(int ncid, int varid, long[] startp, long[] countp, long[] stridep, uint[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_longlong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_ulonglong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ulong[] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vars_string(int ncid, int varid, long[] startp, long[] countp, long[] stridep, string op);
+        #endregion
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_copy_var(int ncid_in, int varid, int ncid_out);
+        #endregion
+
+        #region Attributes
+        #region Learning about Attributes
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_att(int ncid, int varid, string name, out nc_type xtypep, out int lenp);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_attid(int ncid, int varid, string name, out int idp);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_attname(int ncid, int varid, int attnum, StringBuilder name);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_natts(int ncid, out int ngatts);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_atttype(int ncid, int varid, string name, out nc_type xtypep);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_attlen(int ncid, int varid, string name, out int lenp);
+        #endregion
+
+        #region Getting Attributes
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_text(int ncid, int varid, string name, StringBuilder value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_schar(int ncid, int varid, string name, sbyte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_uchar(int ncid, int varid, string name, byte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_short(int ncid, int varid, string name, short[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_int(int ncid, int varid, string name, int[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_long(int ncid, int varid, string name, long[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_float(int ncid, int varid, string name, float[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_double(int ncid, int varid, string name, double[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_ubyte(int ncid, int varid, string name, byte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_ushort(int ncid, int varid, string name, ushort[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_uint(int ncid, int varid, string name, uint[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_longlong(int ncid, int varid, string name, long[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_att_ulonglong(int ncid, int varid, string name, ulong[] value);
+        #endregion
+
+        #region Writing Attributes
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_text(int ncid, int varid, string name, int len, byte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_schar(int ncid, int varid, string name, nc_type type, int len, sbyte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_uchar(int ncid, int varid, string name, nc_type type, int len, byte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_short(int ncid, int varid, string name, nc_type type, int len, short[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_int(int ncid, int varid, string name, nc_type type, int len, int[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_long(int ncid, int varid, string name, nc_type type, int len, long[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_float(int ncid, int varid, string name, nc_type type, int len, float[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_double(int ncid, int varid, string name, nc_type type, int len, double[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_ubyte(int ncid, int varid, string name, nc_type type, int len, byte[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_ushort(int ncid, int varid, string name, nc_type type, int len, ushort[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_uint(int ncid, int varid, string name, nc_type type, int len, uint[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_longlong(int ncid, int varid, string name, nc_type type, int len, long[] value);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_att_ulonglong(int ncid, int varid, string name, nc_type type, int len, ulong[] value);
+        #endregion
+
+        #region Copying, Deleting and Renaming Attributes
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_copy_att(int ncid_in, int varid_in, string name, int ncid_out, int varid_out);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_del_att(int ncid_in, int varid, string name);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_rename_att(int ncid, int varid, string name, string newname);
+        #endregion
+        #endregion
+
+        #region Groups
+        /// <summary>Define a new group.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_grp(int ncid, string name, out int grp_ncid);
+
+        /// <summary>Retrieve a list of dimension ids associated with a group</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_dimids(int ncid, out int ndims, int[] dimids, int include_parents);
+
+        /// <summary>Given a full name and ncid, find group ncid.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_grp_full_ncid(int ncid, string full_name, out int grp_ncid);
+
+        /// <summary>Given a name and parent ncid, find group ncid.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_grp_ncid(int ncid, string grp_name, out int grp_ncid);
+
+        /// <summary>Given an ncid, find the ncid of its parent group.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_grp_parent(int ncid, out int parent_ncid);
 
         /// <summary>Given locid, find name of group. (Root group is named "/".) </summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -1299,18 +1630,32 @@ namespace CsNetCDF
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_grpname_len(int ncid, out int lenp);
 
-        /// <summary>Given an ncid, find the ncid of its parent group.</summary>
+        /// <summary>Given a location id, return the number of groups it contains, and an array of their locids.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_grp_parent(int ncid, out int parent_ncid);
+        public static extern int nc_inq_grps(int ncid, out int numgrps, out int ncids);
 
-        /// <summary>Given a name and parent ncid, find group ncid.</summary>
+        /// <summary>Given an ncid and group name (NULL gets root group), return locid. </summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_grp_ncid(int ncid, string grp_name, out int grp_ncid);
+        public static extern int nc_inq_ncid(int ncid, string name, out int grp_ncid);
 
-        /// <summary>Given a full name and ncid, find group ncid.</summary>
+        /// <summary>Retrieve a list of types associated with a group.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_grp_full_ncid(int ncid, string full_name, out int grp_ncid);
+        public static extern int nc_inq_typeids(int ncid, out int ntypes, int[] typeids);
 
+        /// <summary>Get a list of varids associated with a group given a group ID.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_varids(int ncid, out int nvars, int[] varids);
+
+        /// <summary>Rename a group.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_rename_grp(int ncid, string name);
+
+        /// <summary>Print the metadata for a file.</summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_show_metadata(int ncid);
+        #endregion
+
+        #region Enum types
         // Enum types
         /// <summary>
         /// Create an enum type. Provide a base type and a name. At the moment
@@ -1334,7 +1679,9 @@ namespace CsNetCDF
         /// <summary>Get enum name from enum value. Name size will be <= NC_MAX_NAME.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_enum_ident(int ncid, nc_type xtype, long value, StringBuilder identifier);
+        #endregion
 
+        #region Misc methods
         /// <summary>
         /// Set the default nc_create format to NC_FORMAT_CLASSIC, NC_FORMAT_64BIT,
         /// NC_FORMAT_CDF5, NC_FORMAT_NETCDF4, or NC_FORMAT_NETCDF4_CLASSIC 
@@ -1349,12 +1696,10 @@ namespace CsNetCDF
         /// <summary>Get the cache size, nelems, and preemption policy.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_chunk_cache(out int sizep, out int nelemsp, out float preemptionp);
+
         #endregion
 
-        #region Misc methods
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_free_string(IntPtr len, IntPtr[] data);
-
+        #region Multi-dimensional array support examples
         // Multi dimensional array support
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var_float(int ncid, int varid, float[,] op);

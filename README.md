@@ -49,3 +49,5 @@ Additionally, the following_var* functions do not have an exact netCDF data type
       
 Also NC_CHAR and NC_BYTE do not have an exact set of_var* functions
 
+
+Note that I have not yet implemented functions related to user defined, compound or variable length data types. I have not used these myself (nor encountered then in the datasets I work with) so have not seen them as a priority. Nonetheless, I will get around to sorting these out soon.

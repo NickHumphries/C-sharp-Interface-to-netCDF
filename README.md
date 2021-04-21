@@ -3,10 +3,11 @@ A C# safe, managed interface to the netCDF DLL
 
 netCDF: doi:10.5065/D6H70CW6 https://doi.org/10.5065/D6H70CW6
      
-     
 This C# interface supports the functions provided by the Unidata netcdf.dll (https://www.unidata.ucar.edu/software/netcdf/) 
-currently up to 4.8, although not all functions are supported (e.g. I have omitted the deprecated varm* functions)
- 
+currently up to 4.8, although not all functions are supported (e.g. I have omitted the deprecated varm* functions).
+
+This interface is intended as a more complete replacement of that provided by Microsoft Research as a part of SDS but which has not been updated in line with netCDF developments by UniData. 
+
 This file supports both x86 and x64 versions of the dlls, the principal difference being that the index[] start[] and count[] 
 arrays for functions such as get_var1 or get_vara are passed as int[] for x86 and long[] for x64.
  

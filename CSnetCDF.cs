@@ -358,7 +358,7 @@ namespace CsNetCDF
 
         /// <summary>Find the name and length of a dimension.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_dim(int ncid, int dimid, string name, out int length);
+        public static extern int nc_inq_dim(int ncid, int dimid, StringBuilder name, out int length);
 
         /// <summary>Find the ID of a dimension from the name.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]

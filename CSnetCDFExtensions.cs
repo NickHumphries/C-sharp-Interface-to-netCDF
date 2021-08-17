@@ -47,7 +47,9 @@ namespace CsNetCDF
             StringBuilder sb = new StringBuilder(lenp);
             status = nc_get_att_text(ncid, varid, name, sb);
             if (status != 0) return string.Empty;
-            return sb.ToString();
+            
+            // We perform a substring here to remove the null terminator
+            return sb.ToString().Substring(0, lenp);
         }
         public static sbyte[] nc_get_att_schar(int ncid, int varid, string name, out int status)
         {

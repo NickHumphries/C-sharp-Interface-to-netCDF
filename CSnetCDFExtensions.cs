@@ -1,5 +1,5 @@
 /*
- *  Use this file, rather than CSnetCDF.cs, for customised methods, such as multidimensional array
+ *  Use this file, rather than CsNetCDF.cs, for customised methods, such as multidimensional array
  *  support, or other helper methods.
  */
 using System;
@@ -47,9 +47,7 @@ namespace CsNetCDF
             StringBuilder sb = new StringBuilder(lenp);
             status = nc_get_att_text(ncid, varid, name, sb);
             if (status != 0) return string.Empty;
-            
-            // We perform a substring here to remove the null terminator
-            return sb.ToString().Substring(0, lenp);
+            return sb.ToString();
         }
         public static sbyte[] nc_get_att_schar(int ncid, int varid, string name, out int status)
         {
@@ -382,7 +380,309 @@ namespace CsNetCDF
 
         #endregion
 
-        #region Multi-dimensional array support example
+        #region Higher level methods
+        // These methods wrap up some NetCDF function calls that make them easier to use
+        //  but less robust - they will be fine if we know we are using a good NetCDF file or we're happy to skip some error processing
+        // Get a global attribute
+        public static string GetGlobalAttributeX(int ncid, string p_AttName)
+        {
+            try
+            {
+                if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) throw new Exception("Global attribute " + p_AttName + " not found");
+                if (type != nc_type.NC_STRING) throw new Exception("Global attribute " + p_AttName + " is not type NC_STRING");
+                StringBuilder sb = new StringBuilder(len);
+                if (nc_get_att_text(ncid, NC_GLOBAL, p_AttName, sb) != 0) return string.Empty;
+                return sb.ToString().Substring(0, len);
+            }
+            catch (Exception e) { throw new Exception("GetGlobalAttribute for " + p_AttName + " failed", e); }
+        }
+        public static string GetGlobalAttribute(int ncid, string p_AttName)
+        {
+            try
+            {
+                if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return string.Empty;
+                if (type != nc_type.NC_STRING && type != nc_type.NC_CHAR) return string.Empty;
+                StringBuilder sb = new StringBuilder(len);
+                if (nc_get_att_text(ncid, NC_GLOBAL, p_AttName, sb) != 0) return string.Empty;
+                return sb.ToString().Substring(0, len);
+            }
+            catch (Exception e) { throw new Exception("GetGlobalAttribute for " + p_AttName + " failed", e); }
+        }        public static bool GetGlobalAttribute(int ncid, string p_AttName, out int value)
+        {
+            value = 0;
+
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return false;
+
+            int[] s = new int[len];
+
+            if (nc_get_att_int(ncid, NC_GLOBAL, p_AttName, s) != 0) return false;
+            value = s[0];
+            return true;
+        }
+
+        public static double GetGlobalDouble(int ncid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return 0;
+            double[] data = new double[len];
+            if (nc_get_att_double(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
+            return data[0];
+        }
+        public static float GetGlobalFloat(int ncid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return 0;
+            float[] data = new float[len];
+            if (nc_get_att_float(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
+            return data[0];
+        }
+
+        public static short GetGlobalShort(int ncid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return 0;
+            short[] data = new short[len];
+            if (nc_get_att_short(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
+            return data[0];
+        }
+
+        public static int GetGlobalInt(int ncid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return 0;
+            int[] data = new int[len];
+            if (nc_get_att_int(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
+            return data[0];
+        }
+
+        public static bool GetGlobalBool(int ncid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return false;
+            StringBuilder sb = new StringBuilder(len);
+            if (nc_get_att_text(ncid, NC_GLOBAL, p_AttName, sb) != 0) return false;
+            bool.TryParse(sb.ToString(), out bool result);
+            return result;
+        }
+
+        // Dates are stored as strings in the metadata - more accessible
+        public static DateTime GetGlobalDateTime(int ncid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out int len) != 0) return new DateTime();
+            StringBuilder sb = new StringBuilder(len);
+            if (nc_get_att_text(ncid, NC_GLOBAL, p_AttName, sb) != 0) return new DateTime();
+
+            DateTime.TryParse(sb.ToString(), out DateTime date);
+            return date;
+        }
+
+        // Get a variable attribute
+        public static string GetVarAttribute(int ncid, string VarName, string p_AttName)
+        {
+            if (nc_inq_varid(ncid, VarName, out int varid) != 0) return string.Empty;
+            return GetVarAttribute(ncid, varid, p_AttName);
+        }
+
+        public static string GetVarAttribute(int ncid, int varid, string p_AttName)
+        {
+            if (nc_inq_att(ncid, varid, p_AttName, out nc_type type, out int len) != 0) return string.Empty;
+            StringBuilder sb = new StringBuilder(len);
+            if (nc_get_att_text(ncid, varid, p_AttName, sb) != 0) return string.Empty;
+            return sb.ToString().Substring(0, len);
+        }
+        public static bool GetVarAttribute(int ncid, string VarName, string p_AttName, out short value)
+        {
+            value = 0;
+
+            if (nc_inq_varid(ncid, VarName, out int varid) != 0) return false;
+            if (nc_inq_att(ncid, varid, p_AttName, out nc_type type, out int len) != 0) return false;
+
+            short[] s = new short[len];
+
+            if (nc_get_att_short(ncid, varid, p_AttName, s) != 0) return false;
+            value = s[0];
+            return true;
+        }
+
+        public static bool GetVarAttribute(int ncid, string VarName, string p_AttName, out int value)
+        {
+            value = 0;
+
+            if (nc_inq_varid(ncid, VarName, out int varid) != 0) return false;
+            if (nc_inq_att(ncid, varid, p_AttName, out nc_type type, out int len) != 0) return false;
+
+            int[] s = new int[len];
+
+            if (nc_get_att_int(ncid, varid, p_AttName, s) != 0) return false;
+            value = s[0];
+            return true;
+        }
+
+        public static bool GetVarAttribute(int ncid, string VarName, string p_AttName, out float value)
+        {
+            value = 0;
+
+            if (nc_inq_varid(ncid, VarName, out int varid) != 0) return false;
+            if (nc_inq_att(ncid, varid, p_AttName, out nc_type type, out int len) != 0) return false;
+
+            float[] s = new float[len];
+
+            if (nc_get_att_float(ncid, varid, p_AttName, s) != 0) return false;
+            value = s[0];
+            return true;
+        }
+
+        // Check if a variable exists
+        public static bool VarExists(int ncid, string VarName)
+        {
+            return nc_inq_varid(ncid, VarName, out int varid) == 0;
+        }
+
+        // Get int data
+        public static void Get_int(int ncid, string VarName, int[] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_int(ncid, varid, data);
+        }
+
+        // Get float data
+        public static void Get_float(int ncid, string VarName, float[] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_float(ncid, varid, data);
+        }
+
+        public static float[] Get_float(int ncid, string VarName)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_inq_dimid(ncid, VarName, out int dimid);
+            nc_inq_dimlen(ncid, dimid, out int PointsCount);
+            float[] data = new float[PointsCount];
+            nc_get_var_float(ncid, varid, data);
+            return data;
+        }
+
+        // Get float data
+        public static void Get_float(int ncid, string VarName, float[,,] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_float(ncid, varid, data);
+        }
+
+        // Get double data
+        public static void Get_double(int ncid, string VarName, double[] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_double(ncid, varid, data);
+        }
+
+        // Get short data
+        public static void Get_short(int ncid, string VarName, short[] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_short(ncid, varid, data);
+        }
+
+        public static void Get_short(int ncid, string VarName, short[,] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_short(ncid, varid, data);
+        }
+
+        // Get long data
+        public static void Get_long(int ncid, string VarName, long[] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_longlong(ncid, varid, data);
+        }
+
+        // Get byte data
+        public static void Get_byte(int ncid, string VarName, byte[] data)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_get_var_ubyte(ncid, varid, data);
+        }
+
+        // Methods to write attribute data
+        public static void PutGlobalAttribute(int ncid, string AttName, string AttValue)
+        {
+            nc_put_att_text(ncid, NC_GLOBAL, AttName, AttValue.Length, AttValue);
+        }
+
+        public static void PutGlobalAttribute(int ncid, string AttName, DateTime AttValue)
+        {
+            string date = string.Empty;
+
+            // Check for Access null dates and write an empty string
+            date = AttValue.ToString("o");
+
+            nc_put_att_text(ncid, NC_GLOBAL, AttName, date.Length, date);
+        }
+
+        public static void PutGlobalAttribute(int ncid, string AttName, double AttValue)
+        {
+            double[] att = new double[1];
+            att[0] = AttValue;
+            nc_put_att_double(ncid, NC_GLOBAL, AttName, nc_type.NC_DOUBLE, att.Length, att);
+        }
+
+        public static void PutGlobalAttribute(int ncid, string AttName, float AttValue)
+        {
+            float[] att = new float[1];
+            att[0] = AttValue;
+            nc_put_att_float(ncid, NC_GLOBAL, AttName, nc_type.NC_FLOAT, att.Length, att);
+        }
+        public static void PutGlobalAttribute(int ncid, string AttName, int AttValue)
+        {
+            int[] att = new int[1];
+            att[0] = AttValue;
+            nc_put_att_int(ncid, NC_GLOBAL, AttName, nc_type.NC_INT, att.Length, att);
+        }
+
+        public static void PutGlobalAttribute(int ncid, string AttName, bool AttValue)
+        {
+            PutGlobalAttribute(ncid, AttName, AttValue.ToString());
+        }
+
+        public static void PutVarAttribute(int ncid, int varid, string AttName, string AttValue)
+        {
+            nc_put_att_text(ncid, varid, AttName, AttValue.Length, AttValue);
+        }
+
+        public static void PutVarAttribute(int ncid, int varid, string AttName, DateTime AttValue)
+        {
+            string date = string.Empty;
+
+            // Check for Access null dates and write an empty string
+            date = AttValue.ToString("o");
+
+            nc_put_att_text(ncid, varid, AttName, date.Length, date);
+        }
+
+        public static void PutVarAttribute(int ncid, int varid, string AttName, double AttValue)
+        {
+            double[] att = new double[1];
+            att[0] = AttValue;
+            nc_put_att_double(ncid, varid, AttName, nc_type.NC_DOUBLE, att.Length, att);
+        }
+
+        public static void PutVarAttribute(int ncid, int varid, string AttName, float AttValue)
+        {
+            float[] att = new float[1];
+            att[0] = AttValue;
+            nc_put_att_float(ncid, varid, AttName, nc_type.NC_FLOAT, att.Length, att);
+        }
+        public static void PutVarAttribute(int ncid, int varid, string AttName, int AttValue)
+        {
+            int[] att = new int[1];
+            att[0] = AttValue;
+            nc_put_att_int(ncid, varid, AttName, nc_type.NC_INT, att.Length, att);
+        }
+
+        public static void PutVarAttribute(int ncid, int varid, string AttName, bool AttValue)
+        {
+            PutVarAttribute(ncid, varid, AttName, AttValue.ToString());
+        }
+
+        #endregion
+
+        #region Multi-dimensional array support
+        // Get methods
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var_float(int ncid, int varid, float[,,] ip);
 
@@ -398,6 +698,15 @@ namespace CsNetCDF
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var_short(int ncid, int varid, short[,] ip);
 
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_vara_short(int ncid, int varid, long[,] start, long[,] count, short[,] ip);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_vara_short(int ncid, int varid, long[] start, long[] count, short[,,] ip);
+
+        // Put methods
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_float(int ncid, int varid, float[,,] op);
 
         #endregion
     }

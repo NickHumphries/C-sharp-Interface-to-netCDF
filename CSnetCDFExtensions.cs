@@ -499,6 +499,19 @@ namespace CsNetCDF
             return true;
         }
 
+        public static bool GetVarAttribute(int ncid, int varid, string p_AttName, out short value)
+        {
+            value = 0;
+
+            if (nc_inq_att(ncid, varid, p_AttName, out nc_type type, out int len) != 0) return false;
+
+            short[] s = new short[len];
+
+            if (nc_get_att_short(ncid, varid, p_AttName, s) != 0) return false;
+            value = s[0];
+            return true;
+        }
+
         public static bool GetVarAttribute(int ncid, string VarName, string p_AttName, out int value)
         {
             value = 0;
@@ -527,6 +540,19 @@ namespace CsNetCDF
             return true;
         }
 
+        public static bool GetVarAttribute(int ncid, int varid, string p_AttName, out float value)
+        {
+            value = 0;
+
+            if (nc_inq_att(ncid, varid, p_AttName, out nc_type type, out int len) != 0) return false;
+
+            float[] s = new float[len];
+
+            if (nc_get_att_float(ncid, varid, p_AttName, s) != 0) return false;
+            value = s[0];
+            return true;
+        }
+
         // Check if a variable exists
         public static bool VarExists(int ncid, string VarName)
         {
@@ -538,6 +564,16 @@ namespace CsNetCDF
         {
             nc_inq_varid(ncid, VarName, out int varid);
             nc_get_var_int(ncid, varid, data);
+        }
+
+        public static int[] Get_int(int ncid, string VarName)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_inq_dimid(ncid, VarName, out int dimid);
+            nc_inq_dimlen(ncid, dimid, out int PointsCount);
+            int[] data = new int[PointsCount];
+            nc_get_var_int(ncid, varid, data);
+            return data;
         }
 
         // Get float data
@@ -578,6 +614,16 @@ namespace CsNetCDF
             nc_get_var_short(ncid, varid, data);
         }
 
+        public static short[] Get_short(int ncid, string VarName)
+        {
+            nc_inq_varid(ncid, VarName, out int varid);
+            nc_inq_dimid(ncid, VarName, out int dimid);
+            nc_inq_dimlen(ncid, dimid, out int PointsCount);
+            short[] data = new short[PointsCount];
+            nc_get_var_short(ncid, varid, data);
+            return data;
+        }
+
         public static void Get_short(int ncid, string VarName, short[,] data)
         {
             nc_inq_varid(ncid, VarName, out int varid);
@@ -606,32 +652,26 @@ namespace CsNetCDF
 
         public static void PutGlobalAttribute(int ncid, string AttName, DateTime AttValue)
         {
-            string date = string.Empty;
-
-            // Check for Access null dates and write an empty string
-            date = AttValue.ToString("o");
-
-            nc_put_att_text(ncid, NC_GLOBAL, AttName, date.Length, date);
+            PutVarAttribute(ncid, NC_GLOBAL, AttName, AttValue);
         }
 
         public static void PutGlobalAttribute(int ncid, string AttName, double AttValue)
         {
-            double[] att = new double[1];
-            att[0] = AttValue;
-            nc_put_att_double(ncid, NC_GLOBAL, AttName, nc_type.NC_DOUBLE, att.Length, att);
+            PutVarAttribute(ncid, NC_GLOBAL, AttName, AttValue);
         }
 
         public static void PutGlobalAttribute(int ncid, string AttName, float AttValue)
         {
-            float[] att = new float[1];
-            att[0] = AttValue;
-            nc_put_att_float(ncid, NC_GLOBAL, AttName, nc_type.NC_FLOAT, att.Length, att);
+            PutVarAttribute(ncid, NC_GLOBAL, AttName, AttValue);
         }
         public static void PutGlobalAttribute(int ncid, string AttName, int AttValue)
         {
-            int[] att = new int[1];
-            att[0] = AttValue;
-            nc_put_att_int(ncid, NC_GLOBAL, AttName, nc_type.NC_INT, att.Length, att);
+            PutVarAttribute(ncid, NC_GLOBAL, AttName, AttValue);
+        }
+
+        public static void PutGlobalAttribute(int ncid, string AttName, short AttValue)
+        {
+            PutVarAttribute(ncid, NC_GLOBAL, AttName, AttValue);
         }
 
         public static void PutGlobalAttribute(int ncid, string AttName, bool AttValue)
@@ -674,6 +714,12 @@ namespace CsNetCDF
             nc_put_att_int(ncid, varid, AttName, nc_type.NC_INT, att.Length, att);
         }
 
+        public static void PutVarAttribute(int ncid, int varid, string AttName, short AttValue)
+        {
+            short[] att = new short[1];
+            att[0] = AttValue;
+            nc_put_att_short(ncid, varid, AttName, nc_type.NC_SHORT, att.Length, att);
+        }
         public static void PutVarAttribute(int ncid, int varid, string AttName, bool AttValue)
         {
             PutVarAttribute(ncid, varid, AttName, AttValue.ToString());
@@ -707,6 +753,20 @@ namespace CsNetCDF
         // Put methods
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var_float(int ncid, int varid, float[,,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_short(int ncid, int varid, short[,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_var_short(int ncid, int varid, short[,,] ip);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_short(int ncid, int varid, short[,,] op);
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_var_ubyte(int ncid, int varid, byte[,] ip);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_var_float(int ncid, int varid, float[,] ip);
 
         #endregion
     }

@@ -8,8 +8,9 @@ currently up to 4.8, although not all functions are supported (e.g. I have omitt
 
 This interface is intended as a more complete replacement of that provided by Microsoft Research as a part of SDS but which has not been updated in line with netCDF developments by UniData. 
 
-This file supports both x86 and x64 versions of the dlls, the principal difference being that the index[] start[] and count[] 
-arrays for functions such as get_var1 or get_vara are passed as int[] for x86 and long[] for x64.
+This file supports both x86 and x64 versions of the dlls, by defining the index[] start[] and count[] arrays for get_vara, get_var1 and get_vars methods as IntPtr.
+Wrappers for these methods have been provided so that these arrays can always be defined in the calling program as int[].
+Note that this also applies to lengths, such as returned from nc_inq_dimlen, where again the lengths are defined as IntPtr but wrappers exists to allow int to be used.
  
 A collection of C# friendly methods have been provided to simplify calls to functions returning string variables and also for 
 getting and putting attributes. Thanks to https://stackoverflow.com/questions/6300093/why-cant-i-return-a-char-string-from-c-to-c-sharp-in-a-release-build 

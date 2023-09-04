@@ -3,12 +3,13 @@
  * Nick Humphries   April 2021
  *     
  * This C# interface supports the functions provided by the Unidata netcdf.dll (https://www.unidata.ucar.edu/software/netcdf/) 
- * currently up to 4.7.4, although not all functions are supported (e.g. I have omitted the deprecated *varm* functions)
+ * currently up to 4.8.0 (2021-03-31), although not all functions are supported (e.g. I have omitted the deprecated *varm* functions)
  * 
  * netCDF: doi:10.5065/D6H70CW6 https://doi.org/10.5065/D6H70CW6
  * 
- * This file supports both x86 and x64 versions of the dlls, the principal difference being that the index[] start[] and count[] 
- * arrays for functions such as get_var1 or get_vara are passed as int[] for x86 and long[] for x64.
+ * This file supports both x86 and x64 versions of the dlls, by defining the index[] start[] and count[] arrays for get_vara, get_var1 and get_vars methods as IntPtr.
+ * Wrappers for these methods have been provided so that these arrays can always be defined in the calling program as int[].
+ * Note that this also applies to lengths, such as returned from nc_inq_dimlen, where again the lengths are defined as IntPtr but wrappers exists to allow int to be used.
  * 
  * A collection of C# friendly methods have been provided to simplify calls to functions returning string variables and also for 
  * getting and putting attributes. Thanks to https://stackoverflow.com/questions/6300093/why-cant-i-return-a-char-string-from-c-to-c-sharp-in-a-release-build 
@@ -45,7 +46,7 @@
  *      schar   
  *      uchar
  *      
- *  and NC_CHAR and NC_BYTE do not have an exact set of *_var* functions
+ * NC_CHAR and NC_BYTE do not have an exact set of *_var* functions
  *  
  */
 
@@ -84,6 +85,11 @@ namespace CsNetCDF
          */
         public const int NC_NOSHUFFLE = 0;
         public const int NC_SHUFFLE = 1;
+
+        /* Control the compression
+         */
+        public const int NC_NODEFLATE = 0;
+        public const int NC_DEFLATE = 1;
 
         /// <summary>Minimum deflate level.</summary>
         public const int NC_MIN_DEFLATE_LEVEL = 0;
@@ -140,6 +146,16 @@ namespace CsNetCDF
             NC_UINT64 = 11,
             /// <summary>string</summary>
             NC_STRING = 12,
+            // The following are use internally in support of user-defines
+            // types. They are also the class returned by nc_inq_user_type.
+            /// <summary>vlen (variable-length) types</summary>
+            NC_VLEN = 13,
+            /// <summary>opaque types</summary>
+            NC_OPAQUE = 14,
+            /// <summary>enum types</summary>
+            NC_ENUM = 15,
+            /// <summary>compound types</summary>
+            NC_COMPOUND = 16
         }
 
         /// <summary>
@@ -178,7 +194,7 @@ namespace CsNetCDF
 
         /// <summary>
         ///	Fill value arrays for use in the corresponding nc_put_att function e.g.
-        /// NetCDF.nc_put_att_float(ncid, DataVarid, "_FillValue", NetCDF.NcType.NC_FLOAT, 1, NetCDF.FillVars.FILL_FLOAT);
+        /// NetCDF.nc_put_att_float(ncid, DataVarid, "_FillValue", NetCDF.nc_type.NC_FLOAT, 1, NetCDF.FillVars.FILL_FLOAT);
         /// To save having to define the array each time
         /// </summary>
         public static class FillVars
@@ -326,7 +342,7 @@ namespace CsNetCDF
         /// <summary>Learn the path used to open/create the file. 
         /// Use nc_inq_path(ncid) instead, otherwise a correctly sized StringBuilder is required</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_path(int ncid, out int pathlen, StringBuilder path);
+        public static extern int nc_inq_path(int ncid, out IntPtr pathlen, StringBuilder path);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_type(int ncid, out nc_type type, StringBuilder name, out int size);
@@ -354,11 +370,11 @@ namespace CsNetCDF
         //
         /// <summary>Define a new dimension.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_def_dim(int ncid, string name, int len, out int dimidp);
+        public static extern int nc_def_dim(int ncid, string name, IntPtr len, out int dimidp);
 
         /// <summary>Find the name and length of a dimension.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_dim(int ncid, int dimid, StringBuilder name, out int length);
+        public static extern int nc_inq_dim(int ncid, int dimid, StringBuilder name, out IntPtr len);
 
         /// <summary>Find the ID of a dimension from the name.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -366,7 +382,7 @@ namespace CsNetCDF
 
         /// <summary>Find the length of a dimension.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_dimlen(int ncid, int dimid, out int length);
+        public static extern int nc_inq_dimlen(int ncid, int dimid, out IntPtr len);
 
         /// <summary>Find out the name of a dimension.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -485,263 +501,135 @@ namespace CsNetCDF
         public static extern int nc_get_var_string(int ncid, int varid, IntPtr[] ip);
         #endregion
 
-        #region x86 versions of get_var1
+        #region get_var1
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_text(int ncid, int varid, int[] index, out byte ip);
+        public static extern int nc_get_var1_text(int ncid, int varid, IntPtr[] index, out byte ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_schar(int ncid, int varid, int[] index, out sbyte ip);
+        public static extern int nc_get_var1_schar(int ncid, int varid, IntPtr[] index, out sbyte ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_uchar(int ncid, int varid, int[] index, out byte ip);
+        public static extern int nc_get_var1_uchar(int ncid, int varid, IntPtr[] index, out byte ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_short(int ncid, int varid, int[] index, out short ip);
+        public static extern int nc_get_var1_short(int ncid, int varid, IntPtr[] index, out short ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_int(int ncid, int varid, int[] index, out int ip);
+        public static extern int nc_get_var1_int(int ncid, int varid, IntPtr[] index, out int ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_long(int ncid, int varid, int[] index, out long ip);
+        public static extern int nc_get_var1_long(int ncid, int varid, IntPtr[] index, out long ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_float(int ncid, int varid, int[] index, out float ip);
+        public static extern int nc_get_var1_float(int ncid, int varid, IntPtr[] index, out float ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_double(int ncid, int varid, int[] index, out double ip);
+        public static extern int nc_get_var1_double(int ncid, int varid, IntPtr[] index, out double ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_ubyte(int ncid, int varid, int[] index, out byte ip);
+        public static extern int nc_get_var1_ubyte(int ncid, int varid, IntPtr[] index, out byte ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_ushort(int ncid, int varid, int[] index, out ushort ip);
+        public static extern int nc_get_var1_ushort(int ncid, int varid, IntPtr[] index, out ushort ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_uint(int ncid, int varid, int[] index, out uint ip);
+        public static extern int nc_get_var1_uint(int ncid, int varid, IntPtr[] index, out uint ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_longlong(int ncid, int varid, int[] index, out long ip);
+        public static extern int nc_get_var1_longlong(int ncid, int varid, IntPtr[] index, out long ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_ulonglong(int ncid, int varid, int[] index, out ulong ip);
+        public static extern int nc_get_var1_ulonglong(int ncid, int varid, IntPtr[] index, out ulong ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_string(int ncid, int varid, int[] index, IntPtr[] ip);
+        public static extern int nc_get_var1_string(int ncid, int varid, IntPtr[] index, IntPtr[] ip);
         #endregion
 
-        #region x64 versions of get_var1
+        #region get_vara
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_text(int ncid, int varid, long[] index, out byte ip);
+        public static extern int nc_get_vara_text(int ncid, int varid, IntPtr[] start, IntPtr[] count, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_schar(int ncid, int varid, long[] index, out sbyte ip);
+        public static extern int nc_get_vara_schar(int ncid, int varid, IntPtr[] start, IntPtr[] count, sbyte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_uchar(int ncid, int varid, long[] index, out byte ip);
+        public static extern int nc_get_vara_uchar(int ncid, int varid, IntPtr[] start, IntPtr[] count, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_short(int ncid, int varid, long[] index, out short ip);
+        public static extern int nc_get_vara_short(int ncid, int varid, IntPtr[] start, IntPtr[] count, short[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_int(int ncid, int varid, long[] index, out int ip);
+        public static extern int nc_get_vara_int(int ncid, int varid, IntPtr[] start, IntPtr[] count, int[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_long(int ncid, int varid, long[] index, out long ip);
+        public static extern int nc_get_vara_long(int ncid, int varid, IntPtr[] start, IntPtr[] count, long[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_float(int ncid, int varid, long[] index, out float ip);
+        public static extern int nc_get_vara_float(int ncid, int varid, IntPtr[] start, IntPtr[] count, float[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_double(int ncid, int varid, long[] index, out double ip);
+        public static extern int nc_get_vara_double(int ncid, int varid, IntPtr[] start, IntPtr[] count, double[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_ubyte(int ncid, int varid, long[] index, out byte ip);
+        public static extern int nc_get_vara_ubyte(int ncid, int varid, IntPtr[] start, IntPtr[] count, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_ushort(int ncid, int varid, long[] index, out ushort ip);
+        public static extern int nc_get_vara_ushort(int ncid, int varid, IntPtr[] start, IntPtr[] count, ushort[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_uint(int ncid, int varid, long[] index, out uint ip);
+        public static extern int nc_get_vara_uint(int ncid, int varid, IntPtr[] start, IntPtr[] count, uint[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_longlong(int ncid, int varid, long[] index, out long ip);
+        public static extern int nc_get_vara_longlong(int ncid, int varid, IntPtr[] start, IntPtr[] count, long[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_ulonglong(int ncid, int varid, long[] index, out ulong ip);
+        public static extern int nc_get_vara_ulonglong(int ncid, int varid, IntPtr[] start, IntPtr[] count, ulong[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_var1_string(int ncid, int varid, long[] index, out StringBuilder ip);
+        public static extern int nc_get_vara_string(int ncid, int varid, IntPtr[] start, IntPtr[] count, IntPtr[] ip);
         #endregion
 
-        #region x86 versions of get_vara
+        #region get_vars
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_text(int ncid, int varid, int[] start, int[] count, byte[] ip);
+        public static extern int nc_get_vars_text(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_schar(int ncid, int varid, int[] start, int[] count, sbyte[] ip);
+        public static extern int nc_get_vars_uchar(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, byte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_uchar(int ncid, int varid, int[] start, int[] count, byte[] ip);
+        public static extern int nc_get_vars_schar(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, sbyte[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_short(int ncid, int varid, int[] start, int[] count, short[] ip);
+        public static extern int nc_get_vars_short(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, short[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_int(int ncid, int varid, int[] start, int[] count, int[] ip);
+        public static extern int nc_get_vars_int(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, int[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_long(int ncid, int varid, int[] start, int[] count, long[] ip);
+        public static extern int nc_get_vars_long(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, long[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_float(int ncid, int varid, int[] start, int[] count, float[] ip);
+        public static extern int nc_get_vars_float(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, float[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_double(int ncid, int varid, int[] start, int[] count, double[] ip);
+        public static extern int nc_get_vars_double(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, double[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_ubyte(int ncid, int varid, int[] start, int[] count, byte[] ip);
+        public static extern int nc_get_vars_ushort(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, ushort[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_ushort(int ncid, int varid, int[] start, int[] count, ushort[] ip);
+        public static extern int nc_get_vars_uint(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, uint[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_uint(int ncid, int varid, int[] start, int[] count, uint[] ip);
+        public static extern int nc_get_vars_longlong(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, long[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_longlong(int ncid, int varid, int[] start, int[] count, long[] ip);
+        public static extern int nc_get_vars_ulonglong(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, ulong[] ip);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_ulonglong(int ncid, int varid, int[] start, int[] count, ulong[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_string(int ncid, int varid, int[] start, int[] count, IntPtr[] ip);
+        public static extern int nc_get_vars_string(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, IntPtr[] ip);
         #endregion
 
-        #region x64 versions of get_vara
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_text(int ncid, int varid, long[] start, long[] count, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_schar(int ncid, int varid, long[] start, long[] count, sbyte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_uchar(int ncid, int varid, long[] start, long[] count, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_short(int ncid, int varid, long[] start, long[] count, short[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_int(int ncid, int varid, long[] start, long[] count, int[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_long(int ncid, int varid, long[] start, long[] count, long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_float(int ncid, int varid, long[] start, long[] count, float[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_double(int ncid, int varid, long[] start, long[] count, double[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_ubyte(int ncid, int varid, long[] start, long[] count, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_ushort(int ncid, int varid, long[] start, long[] count, ushort[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_uint(int ncid, int varid, long[] start, long[] count, uint[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_longlong(int ncid, int varid, long[] start, long[] count, long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_ulonglong(int ncid, int varid, long[] start, long[] count, ulong[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vara_string(int ncid, int varid, long[] start, long[] count, string[] ip);
-        #endregion
-
-        #region x86 versions of get_vars
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_text(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_uchar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_schar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, sbyte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_short(int ncid, int varid, int[] startp, int[] countp, int[] stridep, short[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_int(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out int[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_long(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_float(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out float[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_double(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out double[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_ushort(int ncid, int varid, int[] startp, int[] countp, int[] stridep, out ushort[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_uint(int ncid, int varid, int[] startp, int[] countp, int[] stridep, uint[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_longlong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_ulonglong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ulong[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_string(int ncid, int varid, int[] startp, int[] countp, int[] stridep, IntPtr[] ip);
-        #endregion
-
-        #region x64 versions of get_vars
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_text(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_uchar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_schar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, sbyte[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_short(int ncid, int varid, long[] startp, long[] countp, long[] stridep, short[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_int(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out int[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_long(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_float(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out float[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_double(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out double[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_ushort(int ncid, int varid, long[] startp, long[] countp, long[] stridep, out ushort[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_uint(int ncid, int varid, long[] startp, long[] countp, long[] stridep, uint[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_longlong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_ulonglong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ulong[] ip);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_get_vars_string(int ncid, int varid, long[] startp, long[] countp, long[] stridep, string[] ip);
-        #endregion
         #endregion
 
         #region Learning about Variables
@@ -798,7 +686,7 @@ namespace CsNetCDF
         public static extern int nc_inq_var_filter(int ncid, int varid, out uint idp, out int nparams, out uint parms);
         #endregion
 
-        #region Writing variables (x86 and x64 versions)
+        #region Writing variables
         #region nc_put_var
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_var_text(int ncid, int varid, byte[] op);
@@ -843,272 +731,143 @@ namespace CsNetCDF
         public static extern int nc_put_var_string(int ncid, int varid, string[] op);
         #endregion
 
-        #region x86 versions of put_var1
+        #region put_var1
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_text(int ncid, int varid, int[] index, byte op);
+        public static extern int nc_put_var1_text(int ncid, int varid, IntPtr[] index, byte op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_schar(int ncid, int varid, int[] index, sbyte op);
+        public static extern int nc_put_var1_schar(int ncid, int varid, IntPtr[] index, sbyte op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_uchar(int ncid, int varid, int[] index, byte op);
+        public static extern int nc_put_var1_uchar(int ncid, int varid, IntPtr[] index, byte op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_short(int ncid, int varid, int[] index, short op);
+        public static extern int nc_put_var1_short(int ncid, int varid, IntPtr[] index, short op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_int(int ncid, int varid, int[] index, int op);
+        public static extern int nc_put_var1_int(int ncid, int varid, IntPtr[] index, int op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_long(int ncid, int varid, int[] index, long op);
+        public static extern int nc_put_var1_long(int ncid, int varid, IntPtr[] index, long op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_float(int ncid, int varid, int[] index, float op);
+        public static extern int nc_put_var1_float(int ncid, int varid, IntPtr[] index, float op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_double(int ncid, int varid, int[] index, double op);
+        public static extern int nc_put_var1_double(int ncid, int varid, IntPtr[] index, double op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_ubyte(int ncid, int varid, int[] index, byte op);
+        public static extern int nc_put_var1_ubyte(int ncid, int varid, IntPtr[] index, byte op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_ushort(int ncid, int varid, int[] index, ushort op);
+        public static extern int nc_put_var1_ushort(int ncid, int varid, IntPtr[] index, ushort op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_uint(int ncid, int varid, int[] index, uint op);
+        public static extern int nc_put_var1_uint(int ncid, int varid, IntPtr[] index, uint op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_longlong(int ncid, int varid, int[] index, long op);
+        public static extern int nc_put_var1_longlong(int ncid, int varid, IntPtr[] index, long op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_ulonglong(int ncid, int varid, int[] index, ulong op);
+        public static extern int nc_put_var1_ulonglong(int ncid, int varid, IntPtr[] index, ulong op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_string(int ncid, int varid, int[] index, string op);
+        public static extern int nc_put_var1_string(int ncid, int varid, IntPtr[] index, string op);
         #endregion
 
-        #region x64 versions or put var1
+        #region put_vara
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_text(int ncid, int varid, long[] index, byte op);
+        public static extern int nc_put_vara_text(int ncid, int varid, IntPtr[] start, IntPtr[] count, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_schar(int ncid, int varid, long[] index, sbyte op);
+        public static extern int nc_put_vara_schar(int ncid, int varid, IntPtr[] start, IntPtr[] count, sbyte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_uchar(int ncid, int varid, long[] index, byte op);
+        public static extern int nc_put_vara_uchar(int ncid, int varid, IntPtr[] start, IntPtr[] count, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_short(int ncid, int varid, long[] index, short op);
+        public static extern int nc_put_vara_short(int ncid, int varid, IntPtr[] start, IntPtr[] count, short[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_int(int ncid, int varid, long[] index, int op);
+        public static extern int nc_put_vara_int(int ncid, int varid, IntPtr[] start, IntPtr[] count, int[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_long(int ncid, int varid, long[] index, long op);
+        public static extern int nc_put_vara_long(int ncid, int varid, IntPtr[] start, IntPtr[] count, long[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_float(int ncid, int varid, long[] index, float op);
+        public static extern int nc_put_vara_float(int ncid, int varid, IntPtr[] start, IntPtr[] count, float[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_double(int ncid, int varid, long[] index, double op);
+        public static extern int nc_put_vara_double(int ncid, int varid, IntPtr[] start, IntPtr[] count, double[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_ubyte(int ncid, int varid, long[] index, byte op);
+        public static extern int nc_put_vara_ubyte(int ncid, int varid, IntPtr[] start, IntPtr[] count, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_ushort(int ncid, int varid, long[] index, ushort op);
+        public static extern int nc_put_vara_ushort(int ncid, int varid, IntPtr[] start, IntPtr[] count, ushort[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_uint(int ncid, int varid, long[] index, uint op);
+        public static extern int nc_put_vara_uint(int ncid, int varid, IntPtr[] start, IntPtr[] count, uint[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_longlong(int ncid, int varid, long[] index, long op);
+        public static extern int nc_put_vara_longlong(int ncid, int varid, IntPtr[] start, IntPtr[] count, long[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_ulonglong(int ncid, int varid, long[] index, ulong op);
+        public static extern int nc_put_vara_ulonglong(int ncid, int varid, IntPtr[] start, IntPtr[] count, ulong[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_var1_string(int ncid, int varid, long[] index, string op);
+        public static extern int nc_put_vara_string(int ncid, int varid, IntPtr[] start, IntPtr[] count, string[] op);
         #endregion
 
-        #region x86 versions of put_vara
+        #region put_vars
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_text(int ncid, int varid, int[] start, int[] count, byte[] op);
+        public static extern int nc_put_vars_text(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_schar(int ncid, int varid, int[] start, int[] count, sbyte[] op);
+        public static extern int nc_put_vars_uchar(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, byte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_uchar(int ncid, int varid, int[] start, int[] count, byte[] op);
+        public static extern int nc_put_vars_schar(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, sbyte[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_short(int ncid, int varid, int[] start, int[] count, short[] op);
+        public static extern int nc_put_vars_short(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, short[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_int(int ncid, int varid, int[] start, int[] count, int[] op);
+        public static extern int nc_put_vars_int(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, int[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_long(int ncid, int varid, int[] start, int[] count, long[] op);
+        public static extern int nc_put_vars_long(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, long[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_float(int ncid, int varid, int[] start, int[] count, float[] op);
+        public static extern int nc_put_vars_float(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, float[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_double(int ncid, int varid, int[] start, int[] count, double[] op);
+        public static extern int nc_put_vars_double(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, double[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_ubyte(int ncid, int varid, int[] start, int[] count, byte[] op);
+        public static extern int nc_put_vars_ushort(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, ushort[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_ushort(int ncid, int varid, int[] start, int[] count, ushort[] op);
+        public static extern int nc_put_vars_uint(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, uint[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_uint(int ncid, int varid, int[] start, int[] count, uint[] op);
+        public static extern int nc_put_vars_longlong(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, long[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_longlong(int ncid, int varid, int[] start, int[] count, long[] op);
+        public static extern int nc_put_vars_ulonglong(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, ulong[] op);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_ulonglong(int ncid, int varid, int[] start, int[] count, ulong[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_string(int ncid, int varid, int[] start, int[] count, string[] op);
-        #endregion
-
-        #region x64 versions of put_vara
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_text(int ncid, int varid, long[] start, long[] count, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_schar(int ncid, int varid, long[] start, long[] count, sbyte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_uchar(int ncid, int varid, long[] start, long[] count, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_short(int ncid, int varid, long[] start, long[] count, short[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_int(int ncid, int varid, long[] start, long[] count, int[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_long(int ncid, int varid, long[] start, long[] count, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_float(int ncid, int varid, long[] start, long[] count, float[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_double(int ncid, int varid, long[] start, long[] count, double[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_ubyte(int ncid, int varid, long[] start, long[] count, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_ushort(int ncid, int varid, long[] start, long[] count, ushort[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_uint(int ncid, int varid, long[] start, long[] count, uint[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_longlong(int ncid, int varid, long[] start, long[] count, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_ulonglong(int ncid, int varid, long[] start, long[] count, ulong[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vara_string(int ncid, int varid, long[] start, long[] count, string[] op);
-        #endregion
-
-        #region x86 versions of put_vars
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_text(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uchar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_schar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, sbyte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_short(int ncid, int varid, int[] startp, int[] countp, int[] stridep, short[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_int(int ncid, int varid, int[] startp, int[] countp, int[] stridep, int[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_long(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_float(int ncid, int varid, int[] startp, int[] countp, int[] stridep, float[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_double(int ncid, int varid, int[] startp, int[] countp, int[] stridep, double[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ushort(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ushort[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uint(int ncid, int varid, int[] startp, int[] countp, int[] stridep, uint[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_longlong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ulonglong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ulong[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_string(int ncid, int varid, int[] startp, int[] countp, int[] stridep, string op);
-        #endregion
-
-        #region x64 versions of put_vars
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_text(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uchar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, byte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_schar(int ncid, int varid, long[] startp, long[] countp, long[] stridep, sbyte[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_short(int ncid, int varid, long[] startp, long[] countp, long[] stridep, short[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_int(int ncid, int varid, long[] startp, long[] countp, long[] stridep, int[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_long(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_float(int ncid, int varid, long[] startp, long[] countp, long[] stridep, float[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_double(int ncid, int varid, long[] startp, long[] countp, long[] stridep, double[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ushort(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ushort[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_uint(int ncid, int varid, long[] startp, long[] countp, long[] stridep, uint[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_longlong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, long[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_ulonglong(int ncid, int varid, long[] startp, long[] countp, long[] stridep, ulong[] op);
-
-        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_vars_string(int ncid, int varid, long[] startp, long[] countp, long[] stridep, string op);
+        public static extern int nc_put_vars_string(int ncid, int varid, IntPtr[] startp, IntPtr[] countp, IntPtr[] stridep, string op);
         #endregion
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_copy_var(int ncid_in, int varid, int ncid_out);
         #endregion
 
-        #region Attributes
+        #region Attributes 
         #region Learning about Attributes
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_att(int ncid, int varid, string name, out nc_type xtypep, out int lenp);
+        public static extern int nc_inq_att(int ncid, int varid, string name, out nc_type xtypep, out IntPtr lenp);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_attid(int ncid, int varid, string name, out int idp);
@@ -1123,7 +882,14 @@ namespace CsNetCDF
         public static extern int nc_inq_atttype(int ncid, int varid, string name, out nc_type xtypep);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_attlen(int ncid, int varid, string name, out int lenp);
+        public static extern int nc_inq_attlen(int ncid, int varid, string name, out IntPtr lenp);
+
+        #region x64
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_att(int ncid, int varid, string name, out nc_type xtypep, out long lenp);
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_attlen(int ncid, int varid, string name, out long lenp);
+        #endregion
         #endregion
 
         #region Getting Attributes
@@ -1169,43 +935,43 @@ namespace CsNetCDF
 
         #region Writing Attributes
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_text(int ncid, int varid, string name, int len, string value);
+        public static extern int nc_put_att_text(int ncid, int varid, string name, IntPtr len, string value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_schar(int ncid, int varid, string name, nc_type type, int len, sbyte[] value);
+        public static extern int nc_put_att_schar(int ncid, int varid, string name, nc_type type, IntPtr len, sbyte[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_uchar(int ncid, int varid, string name, nc_type type, int len, byte[] value);
+        public static extern int nc_put_att_uchar(int ncid, int varid, string name, nc_type type, IntPtr len, byte[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_short(int ncid, int varid, string name, nc_type type, int len, short[] value);
+        public static extern int nc_put_att_short(int ncid, int varid, string name, nc_type type, IntPtr len, short[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_int(int ncid, int varid, string name, nc_type type, int len, int[] value);
+        public static extern int nc_put_att_int(int ncid, int varid, string name, nc_type type, IntPtr len, int[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_long(int ncid, int varid, string name, nc_type type, int len, long[] value);
+        public static extern int nc_put_att_long(int ncid, int varid, string name, nc_type type, IntPtr len, long[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_float(int ncid, int varid, string name, nc_type type, int len, float[] value);
+        public static extern int nc_put_att_float(int ncid, int varid, string name, nc_type type, IntPtr len, float[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_double(int ncid, int varid, string name, nc_type type, int len, double[] value);
+        public static extern int nc_put_att_double(int ncid, int varid, string name, nc_type type, IntPtr len, double[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_ubyte(int ncid, int varid, string name, nc_type type, int len, byte[] value);
+        public static extern int nc_put_att_ubyte(int ncid, int varid, string name, nc_type type, IntPtr len, byte[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_ushort(int ncid, int varid, string name, nc_type type, int len, ushort[] value);
+        public static extern int nc_put_att_ushort(int ncid, int varid, string name, nc_type type, IntPtr len, ushort[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_uint(int ncid, int varid, string name, nc_type type, int len, uint[] value);
+        public static extern int nc_put_att_uint(int ncid, int varid, string name, nc_type type, IntPtr len, uint[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_longlong(int ncid, int varid, string name, nc_type type, int len, long[] value);
+        public static extern int nc_put_att_longlong(int ncid, int varid, string name, nc_type type, IntPtr len, long[] value);
 
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_put_att_ulonglong(int ncid, int varid, string name, nc_type type, int len, ulong[] value);
+        public static extern int nc_put_att_ulonglong(int ncid, int varid, string name, nc_type type, IntPtr len, ulong[] value);
         #endregion
 
         #region Copying, Deleting and Renaming Attributes
@@ -1247,14 +1013,14 @@ namespace CsNetCDF
 
         /// <summary>
         /// Given ncid, find full name and len of full name. (Root group is named "/", with length 1.) 
-        /// But use nc_inq_grpname_full(ncid) instead
+        /// But use the C# friendlier nc_inq_grpname_full(ncid) instead
         /// </summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_grpname_full(int ncid, out int lenp, StringBuilder full_name);
+        public static extern int nc_inq_grpname_full(int ncid, out IntPtr lenp, StringBuilder full_name);
 
         /// <summary>Given ncid, find len of full name. </summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_grpname_len(int ncid, out int lenp);
+        public static extern int nc_inq_grpname_len(int ncid, out IntPtr lenp);
 
         /// <summary>Given a location id, return the number of groups it contains, and an array of their locids.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -1281,6 +1047,93 @@ namespace CsNetCDF
         public static extern int nc_show_metadata(int ncid);
         #endregion
 
+
+        // NOTE User defined, Compound, Enum and VLen functions have not yet been tested
+        //  and the functions required for VLen are incomplete. e.g. the VLen struct is not defined here
+        //  There is also a macro defined for VLen, which we do not have : #define NC_COMPOUND_OFFSET(S,M)    (offsetof(S,M))
+
+        #region Untested functions
+
+        #region User-Defined Types
+        /// <summary> Get the name and size of a type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_type(int ncid, nc_type xtype, StringBuilder name, out IntPtr size);
+
+        /// <summary> Are two types equal? </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_type_equal(int ncid1, nc_type typeid1, int ncid2, nc_type typeid2, out int equal);
+
+        /// <summary> Get the id of a type from the name. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_typeid(int ncid, string name, out nc_type typeidp);
+
+        /// <summary> Find all user-defined types for a location. This finds all user-defined types in a group. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_typeids(int ncid, out int ntypes, out int typeids);
+
+        /// <summary> Find out about a user defined type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_user_type(int ncid, nc_type xtype, StringBuilder name, out IntPtr size, out nc_type base_nc_typep, out int nfieldsp, out int classp);
+        #endregion
+
+        #region Compound Types
+        /// <summary> Here are functions for dealing with compound types.  Create a compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_compound(int ncid, int size, string name, out nc_type typeidp);
+
+        /// <summary> Insert a named field into a compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_insert_compound(int ncid, nc_type xtype, string name, int offset, nc_type field_typeid);
+
+        /// <summary> Insert a named array into a compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_insert_array_compound(int ncid, nc_type xtype, string name, int offset, nc_type field_typeid, int ndims, int dim_sizes);
+
+        /// <summary> Get the name, size, and number of fields in a compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound(int ncid, nc_type xtype, StringBuilder name, out IntPtr sizep, out int nfieldsp);
+
+        /// <summary> Get the name of a compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_name(int ncid, nc_type xtype, StringBuilder name);
+
+        /// <summary> Get the size of a compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_size(int ncid, nc_type xtype, out IntPtr sizep);
+
+        /// <summary> Get the number of fields in this compound type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_nfields(int ncid, nc_type xtype, out int nfieldsp);
+
+        /// <summary> Given the xtype and the fieldid, get all info about it. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_field(int ncid, nc_type xtype, int fieldid, StringBuilder name, out int offsetp, out nc_type field_typeidp, out int ndimsp, out int dim_sizesp);
+
+        /// <summary> Given the typeid and the fieldid, get the name. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_fieldname(int ncid, nc_type xtype, int fieldid, StringBuilder name);
+
+        /// <summary> Given the xtype and the name, get the fieldid. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_fieldindex(int ncid, nc_type xtype, string name, out int fieldidp);
+
+        /// <summary> Given the xtype and fieldid, get the offset. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_fieldoffset(int ncid, nc_type xtype, int fieldid, out int offsetp);
+
+        /// <summary> Given the xtype and the fieldid, get the type of that field. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_fieldtype(int ncid, nc_type xtype, int fieldid, out nc_type field_typeidp);
+
+        /// <summary> Given the xtype and the fieldid, get the number of dimensions for that field (scalars are 0). </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_fieldndims(int ncid, nc_type xtype, int fieldid, out int ndimsp);
+
+        /// <summary> Given the xtype and the fieldid, get the sizes of dimensions for that field. User must have allocated storage for the dim_sizes. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_compound_fielddim_sizes(int ncid, nc_type xtype, int fieldid, out int dim_sizes);
+        #endregion
+
         #region Enum types
         // Enum types
         /// <summary>
@@ -1296,7 +1149,7 @@ namespace CsNetCDF
 
         /// <summary>Get information about an enum type: its name, base type and the number of members defined. </summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
-        public static extern int nc_inq_enum(int ncid, nc_type xtype, StringBuilder name, out nc_type base_nc_typep, out int base_sizep, out int num_membersp);
+        public static extern int nc_inq_enum(int ncid, nc_type xtype, StringBuilder name, out nc_type base_nc_typep, out IntPtr base_sizep, out int num_membersp);
 
         /// <summary>Get information about an enum member</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -1305,6 +1158,31 @@ namespace CsNetCDF
         /// <summary>Get enum name from enum value. Name size will be <= NC_MAX_NAME.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_inq_enum_ident(int ncid, nc_type xtype, long value, StringBuilder identifier);
+        #endregion
+
+        #region Variable Length Array Types
+        /// <summary>* This is the type of arrays of vlens. * Calculate an offset for creating a compound type. This calls a mysterious C macro which was found carved into one of the blocks of the Newgrange passage tomb in County Meath, Ireland. This code has been carbon dated to 3200 B.C.E.  Create a variable length type. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_def_vlen(int ncid, string name, nc_type base_typeid, out nc_type xtypep);
+
+        /// <summary> Find out about a vlen. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_inq_vlen(int ncid, nc_type xtype, StringBuilder name, out IntPtr datum_sizep, out nc_type base_nc_typep);
+
+        /// <summary> When you read VLEN type the library will actually allocate the storage space for the data. This storage space must be freed, so pass the pointer back to this function, when you're done with the data, and it will free the vlen memory. </summary>
+        //[DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        //public static extern int nc_free_vlen(nc_vlen_t* vl);
+
+        //[DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        //public static extern int nc_free_vlens(int len, nc_vlen_t vlens[]);
+
+        /// <summary> Put or get one element in a vlen array. </summary>
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_vlen_element(int ncid, int typeid1, out object vlen_element, IntPtr len, object data);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_vlen_element(int ncid, int typeid1, object vlen_element, out IntPtr len, out object data);
+        #endregion
         #endregion
 
         #region Misc methods
@@ -1322,6 +1200,8 @@ namespace CsNetCDF
         /// <summary>Get the cache size, nelems, and preemption policy.</summary>
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_chunk_cache(out int sizep, out int nelemsp, out float preemptionp);
+
         #endregion
+
     }
 }

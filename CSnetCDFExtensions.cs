@@ -190,29 +190,17 @@ namespace CsNetCDF
 
         #region put_vars
         public static int nc_put_vars_text(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op) => nc_put_vars_text(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_uchar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, byte[] op) => nc_put_vars_uchar(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_schar(int ncid, int varid, int[] startp, int[] countp, int[] stridep, sbyte[] op) => nc_put_vars_schar(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_short(int ncid, int varid, int[] startp, int[] countp, int[] stridep, short[] op) => nc_put_vars_short(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_int(int ncid, int varid, int[] startp, int[] countp, int[] stridep, int[] op) => nc_put_vars_int(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_long(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op) => nc_put_vars_long(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_float(int ncid, int varid, int[] startp, int[] countp, int[] stridep, float[] op) => nc_put_vars_float(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_double(int ncid, int varid, int[] startp, int[] countp, int[] stridep, double[] op) => nc_put_vars_double(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_ushort(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ushort[] op) => nc_put_vars_ushort(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_uint(int ncid, int varid, int[] startp, int[] countp, int[] stridep, uint[] op) => nc_put_vars_uint(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_longlong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, long[] op) => nc_put_vars_longlong(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_ulonglong(int ncid, int varid, int[] startp, int[] countp, int[] stridep, ulong[] op) => nc_put_vars_ulonglong(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
-
         public static int nc_put_vars_string(int ncid, int varid, int[] startp, int[] countp, int[] stridep, string op) => nc_put_vars_string(ncid, varid, ConvertToIntPtr(startp), ConvertToIntPtr(countp), ConvertToIntPtr(stridep), op);
         #endregion
 
@@ -231,9 +219,9 @@ namespace CsNetCDF
         /// <summary>Friendly method for nc_inq_path</summary>
         public static string nc_inq_path(int ncid, out int status)
         {
-            status = nc_inq_path(ncid, out int len, null);
+            status = nc_inq_path(ncid, out IntPtr len, null);
             if (status != 0) return string.Empty;
-            StringBuilder sb = new StringBuilder(len);
+            StringBuilder sb = new StringBuilder((int)len);
             status = nc_inq_path(ncid, out len, sb);
             if (status != 0) return string.Empty;
             return sb.ToString();
@@ -242,9 +230,9 @@ namespace CsNetCDF
         /// <summary>Friendly method for nc_inq_grpname_full</summary>
         public static string nc_inq_grpname_full(int ncid, out int status)
         {
-            status = nc_inq_grpname_full(ncid, out int len, null);
+            status = nc_inq_grpname_full(ncid, out IntPtr len, null);
             if (status != 0) return string.Empty;
-            StringBuilder sb = new StringBuilder(len);
+            StringBuilder sb = new StringBuilder((int)len);
             status = nc_inq_grpname_full(ncid, out len, sb);
             if (status != 0) return string.Empty;
             return sb.ToString();
@@ -255,117 +243,117 @@ namespace CsNetCDF
         //
         public static string nc_get_att_text(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return string.Empty;
-            StringBuilder sb = new StringBuilder(lenp);
+            StringBuilder sb = new StringBuilder((int)len);
             status = nc_get_att_text(ncid, varid, name, sb);
             if (status != 0) return string.Empty;
             return sb.ToString();
         }
         public static sbyte[] nc_get_att_schar(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            sbyte[] value = new sbyte[lenp];
+            sbyte[] value = new sbyte[(int)len];
             status = nc_get_att_schar(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static byte[] nc_get_att_uchar(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            byte[] value = new byte[lenp];
+            byte[] value = new byte[(int)len];
             status = nc_get_att_uchar(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static short[] nc_get_att_short(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            short[] value = new short[lenp];
+            short[] value = new short[(int)len];
             status = nc_get_att_short(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static int[] nc_get_att_int(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            int[] value = new int[lenp];
+            int[] value = new int[(int)len];
             status = nc_get_att_int(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static long[] nc_get_att_long(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            long[] value = new long[lenp];
+            long[] value = new long[(int)len];
             status = nc_get_att_long(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static float[] nc_get_att_float(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            float[] value = new float[lenp];
+            float[] value = new float[(int)len];
             status = nc_get_att_float(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static double[] nc_get_att_double(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            double[] value = new double[lenp];
+            double[] value = new double[(int)len];
             status = nc_get_att_double(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static byte[] nc_get_att_ubyte(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_att(ncid, varid, name, out nc_type nctype, out int lenp);
+            status = nc_inq_att(ncid, varid, name, out nc_type nctype, out IntPtr len);
             if (status != 0) return null;
-            byte[] value = new byte[lenp];
+            byte[] value = new byte[(int)len];
             status = nc_get_att_ubyte(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static ushort[] nc_get_att_ushort(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            ushort[] value = new ushort[lenp];
+            ushort[] value = new ushort[(int)len];
             status = nc_get_att_ushort(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static uint[] nc_get_att_uint(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            uint[] value = new uint[lenp];
+            uint[] value = new uint[(int)len];
             status = nc_get_att_uint(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static long[] nc_get_att_longlong(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            long[] value = new long[lenp];
+            long[] value = new long[(int)len];
             status = nc_get_att_longlong(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
         }
         public static ulong[] nc_get_att_ulonglong(int ncid, int varid, string name, out int status)
         {
-            status = nc_inq_attlen(ncid, varid, name, out int lenp);
+            status = nc_inq_attlen(ncid, varid, name, out IntPtr len);
             if (status != 0) return null;
-            ulong[] value = new ulong[lenp];
+            ulong[] value = new ulong[(int)len];
             status = nc_get_att_ulonglong(ncid, varid, name, value);
             if (status != 0) return null;
             return value;
@@ -585,6 +573,7 @@ namespace CsNetCDF
             value = 0;
 
             if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out IntPtr len) != 0) return false;
+            if (type != nc_type.NC_INT) return false;
 
             int[] s = new int[(int)len];
 
@@ -596,6 +585,8 @@ namespace CsNetCDF
         public static double GetGlobalDouble(int ncid, string p_AttName)
         {
             if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out IntPtr len) != 0) return 0;
+            if (type != nc_type.NC_DOUBLE) return 0;
+
             double[] data = new double[(int)len];
             if (nc_get_att_double(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
             return data[0];
@@ -603,6 +594,8 @@ namespace CsNetCDF
         public static float GetGlobalFloat(int ncid, string p_AttName)
         {
             if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out IntPtr len) != 0) return 0;
+            if (type != nc_type.NC_FLOAT) return 0;
+            
             float[] data = new float[(int)len];
             if (nc_get_att_float(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
             return data[0];
@@ -611,6 +604,8 @@ namespace CsNetCDF
         public static short GetGlobalShort(int ncid, string p_AttName)
         {
             if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out IntPtr len) != 0) return 0;
+            if (type != nc_type.NC_SHORT) return 0;
+
             short[] data = new short[(int)len];
             if (nc_get_att_short(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
             return data[0];
@@ -619,6 +614,8 @@ namespace CsNetCDF
         public static int GetGlobalInt(int ncid, string p_AttName)
         {
             if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out IntPtr len) != 0) return 0;
+            if (type != nc_type.NC_INT) return 0;
+
             int[] data = new int[(int)len];
             if (nc_get_att_int(ncid, NC_GLOBAL, p_AttName, data) != 0) return 0;
             return data[0];
@@ -627,6 +624,7 @@ namespace CsNetCDF
         public static bool GetGlobalBool(int ncid, string p_AttName)
         {
             if (nc_inq_att(ncid, NC_GLOBAL, p_AttName, out nc_type type, out IntPtr len) != 0) return false;
+            
             StringBuilder sb = new StringBuilder((int)len);
             if (nc_get_att_text(ncid, NC_GLOBAL, p_AttName, sb) != 0) return false;
             bool.TryParse(sb.ToString(), out bool result);
@@ -727,7 +725,7 @@ namespace CsNetCDF
         }
 
         // Check if a variable exists
-        public static bool VarExists(int ncid, string VarName) => nc_inq_varid(ncid, VarName, out int varid) == 0;
+        public static bool VarExists(int ncid, string VarName) => nc_inq_varid(ncid, VarName, out _) == 0;
 
         // Get int data
         public static void Get_int(int ncid, string VarName, int[] data)
@@ -740,8 +738,8 @@ namespace CsNetCDF
         {
             nc_inq_varid(ncid, VarName, out int varid);
             nc_inq_dimid(ncid, VarName, out int dimid);
-            nc_inq_dimlen(ncid, dimid, out IntPtr PointsCount);
-            int[] data = new int[(int)PointsCount];
+            nc_inq_dimlen(ncid, dimid, out IntPtr len);
+            int[] data = new int[(int)len];
             nc_get_var_int(ncid, varid, data);
             return data;
         }
@@ -757,8 +755,8 @@ namespace CsNetCDF
         {
             nc_inq_varid(ncid, VarName, out int varid);
             nc_inq_dimid(ncid, VarName, out int dimid);
-            nc_inq_dimlen(ncid, dimid, out IntPtr PointsCount);
-            float[] data = new float[(int)PointsCount];
+            nc_inq_dimlen(ncid, dimid, out IntPtr len);
+            float[] data = new float[(int)len];
             nc_get_var_float(ncid, varid, data);
             return data;
         }
@@ -788,8 +786,8 @@ namespace CsNetCDF
         {
             nc_inq_varid(ncid, VarName, out int varid);
             nc_inq_dimid(ncid, VarName, out int dimid);
-            nc_inq_dimlen(ncid, dimid, out IntPtr PointsCount);
-            short[] data = new short[(int)PointsCount];
+            nc_inq_dimlen(ncid, dimid, out IntPtr len);
+            short[] data = new short[(int)len];
             nc_get_var_short(ncid, varid, data);
             return data;
         }
@@ -818,8 +816,8 @@ namespace CsNetCDF
         {
             nc_inq_varid(ncid, VarName, out int varid);
             nc_inq_dimid(ncid, VarName, out int dimid);
-            nc_inq_dimlen(ncid, dimid, out IntPtr PointsCount);
-            byte[] data = new byte[(int)PointsCount];
+            nc_inq_dimlen(ncid, dimid, out IntPtr len);
+            byte[] data = new byte[(int)len];
             nc_get_var_ubyte(ncid, varid, data);
             return data;
         }
@@ -868,6 +866,9 @@ namespace CsNetCDF
 
         #region Multi-dimensional array support
         // Get methods
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_get_var_ubyte(int ncid, int varid, byte[,] ip);
+
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_get_var_short(int ncid, int varid, short[,] ip);
 
@@ -933,6 +934,37 @@ namespace CsNetCDF
 
 
         // Put methods
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_short(int ncid, int varid, short[,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_int(int ncid, int varid, int[,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_long(int ncid, int varid, long[,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_float(int ncid, int varid, float[,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_double(int ncid, int varid, double[,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_short(int ncid, int varid, short[,,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_int(int ncid, int varid, int[,,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_long(int ncid, int varid, long[,,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_float(int ncid, int varid, float[,,] op);
+
+        [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern int nc_put_var_double(int ncid, int varid, double[,,] op);
+
+
         [DllImport("netcdf.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern int nc_put_vara_short(int ncid, int varid, IntPtr[] start, IntPtr[] count, short[,] op);
 

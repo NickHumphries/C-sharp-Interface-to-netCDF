@@ -24,9 +24,10 @@ Any of the functions can be copied and modified to provide direct access to mult
           to nc_put_var_float(int ncid, int varid, float[,] op);
           or nc_put_var_float(int ncid, int varid, float[,,] op);
         
-I suggest putting these modified methods into the CSnetCDFExtensions.cs file, to keep the principal interface more closely focussed on the netCDF C interface API.
+I suggest putting these modified methods into the CSnetCDFExtensions.cs file, to keep the principal interface more closely focused on the netCDF C interface API.
                 
 Data types
+
 Some of the data types supported by the netCDF dll do not map exactly to C# data types
 The following netCDF data types are defined:
              
@@ -52,4 +53,4 @@ Additionally, the following_var* functions do not have an exact netCDF data type
 Also NC_CHAR and NC_BYTE do not have an exact set of_var* functions
 
 
-Note that I have not yet implemented functions related to user defined, compound or variable length data types. I have not used these myself (nor encountered then in the datasets I work with) so have not seen them as a priority. Nonetheless, I will get around to sorting these out soon.
+Note that I have not yet implemented functions related to user defined, compound or variable length data types. I have not used these myself (nor encountered them in the datasets I work with) so I have not seen them as a priority. 
